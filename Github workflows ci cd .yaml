@@ -1,0 +1,308 @@
+# ============================================================================
+# CI/CD Pipeline - GitHub Actions
+# Workflow: Test → Build → Push to ECR → Deploy to EKS
+# ============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: astrogeo-ai
+  EKS_CLUSTER_NAME: astrogeo-cluster
+  EKS_NAMESPACE: astrogeo
+
+jobs:
+  # ==========================================================================
+  # JOB 1: Code Quality & Testing
+  # ==========================================================================
+  test:
+    name: Run Tests & Quality Checks
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Run linting (flake8)
+        run: |
+          flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      
+      - name: Run type checking (mypy)
+        run: |
+          mypy src --ignore-missing-imports
+        continue-on-error: true
+      
+      - name: Run security check (bandit)
+        run: |
+          bandit -r src -f json -o bandit-report.json
+        continue-on-error: true
+      
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          ENVIRONMENT: testing
+        run: |
+          pytest tests/ \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term-missing \
+            -v
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+      
+      - name: Check code formatting (black)
+        run: |
+          black --check src tests
+      
+      - name: Check import sorting (isort)
+        run: |
+          isort --check-only src tests
+
+  # ==========================================================================
+  # JOB 2: Build & Push Docker Image
+  # ==========================================================================
+  build:
+    name: Build & Push to ECR
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    outputs:
+      image-tag: ${{ steps.build-image.outputs.image-tag }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Build, tag, and push image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build image
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+            --build-arg VCS_REF=${{ github.sha }} \
+            .
+          
+          # Push to ECR
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          # Output image tag
+          echo "image-tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+      
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.build-image.outputs.image-tag }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ==========================================================================
+  # JOB 3: Deploy to EKS (Production)
+  # ==========================================================================
+  deploy-production:
+    name: Deploy to EKS Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://api.astrogeo.ai
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.EKS_CLUSTER_NAME }} \
+            --region ${{ env.AWS_REGION }}
+      
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+      
+      - name: Create/Update Kubernetes secrets
+        run: |
+          kubectl create secret generic astrogeo-secrets \
+            --from-literal=database-url="${{ secrets.DATABASE_URL }}" \
+            --from-literal=secret-key="${{ secrets.SECRET_KEY }}" \
+            --from-literal=mlflow-uri="${{ secrets.MLFLOW_TRACKING_URI }}" \
+            --from-literal=openai-key="${{ secrets.OPENAI_API_KEY }}" \
+            --namespace ${{ env.EKS_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Deploy to Kubernetes
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
+        run: |
+          # Update image in deployment
+          kubectl set image deployment/astrogeo-api \
+            astrogeo-api=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG \
+            --namespace ${{ env.EKS_NAMESPACE }}
+          
+          # Wait for rollout
+          kubectl rollout status deployment/astrogeo-api \
+            --namespace ${{ env.EKS_NAMESPACE }} \
+            --timeout=5m
+      
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n ${{ env.EKS_NAMESPACE }}
+          kubectl get svc -n ${{ env.EKS_NAMESPACE }}
+      
+      - name: Run smoke tests
+        run: |
+          # Get load balancer URL
+          LB_URL=$(kubectl get svc astrogeo-service -n ${{ env.EKS_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          
+          # Wait for service to be ready
+          sleep 30
+          
+          # Health check
+          curl -f http://${LB_URL}:8000/api/v1/health || exit 1
+          
+          echo "Deployment successful!"
+
+  # ==========================================================================
+  # JOB 4: Deploy to EKS (Staging)
+  # ==========================================================================
+  deploy-staging:
+    name: Deploy to EKS Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging-api.astrogeo.ai
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.EKS_CLUSTER_NAME }}-staging \
+            --region ${{ env.AWS_REGION }}
+      
+      - name: Deploy to staging
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image-tag }}
+        run: |
+          kubectl set image deployment/astrogeo-api \
+            astrogeo-api=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG \
+            --namespace astrogeo-staging
+          
+          kubectl rollout status deployment/astrogeo-api \
+            --namespace astrogeo-staging \
+            --timeout=5m
+
+# ============================================================================
+# USAGE
+# ============================================================================
+#
+# This pipeline runs automatically on:
+# - Push to main branch → Deploy to production
+# - Push to develop branch → Deploy to staging
+# - Pull requests → Run tests only
+#
+# Required GitHub Secrets:
+# - AWS_ACCESS_KEY_ID
+# - AWS_SECRET_ACCESS_KEY
+# - AWS_ACCOUNT_ID
+# - DATABASE_URL
+# - SECRET_KEY
+# - MLFLOW_TRACKING_URI
+# - OPENAI_API_KEY
+#
+# ============================================================================

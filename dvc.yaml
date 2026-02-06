@@ -1,0 +1,236 @@
+# DVC Pipeline Definition
+# Defines the complete ML pipeline stages and dependencies
+
+stages:
+  # Stage 1: Data Ingestion
+  data_ingestion:
+    cmd: python -m src.data.ingestion
+    deps:
+      - src/data/ingestion.py
+      - configs/database.yaml
+    params:
+      - params.yaml:
+          - data_ingestion
+          - database
+    outs:
+      - data/raw/dataset.parquet:
+          cache: true
+          persist: true
+    metrics:
+      - data/raw/ingestion_metrics.json:
+          cache: false
+    
+  # Stage 2: Data Validation
+  data_validation:
+    cmd: python -m src.data.validation
+    deps:
+      - src/data/validation.py
+      - data/raw/dataset.parquet
+    params:
+      - params.yaml:
+          - data_preprocessing
+    outs:
+      - data/processed/validation_report.json:
+          cache: false
+    
+  # Stage 3: Data Preprocessing
+  data_preprocessing:
+    cmd: python -m src.data.preprocessing
+    deps:
+      - src/data/preprocessing.py
+      - data/raw/dataset.parquet
+      - data/processed/validation_report.json
+    params:
+      - params.yaml:
+          - data_preprocessing
+          - geospatial
+    outs:
+      - data/processed/preprocessed_data.parquet:
+          cache: true
+          persist: true
+      - data/processed/preprocessing_artifacts.pkl:
+          cache: true
+    metrics:
+      - data/processed/preprocessing_metrics.json:
+          cache: false
+    plots:
+      - data/processed/missing_values.png
+      - data/processed/outliers.png
+    
+  # Stage 4: Feature Engineering
+  feature_engineering:
+    cmd: python -m src.features.engineering
+    deps:
+      - src/features/engineering.py
+      - data/processed/preprocessed_data.parquet
+    params:
+      - params.yaml:
+          - feature_engineering
+          - geospatial
+    outs:
+      - data/features/feature_matrix.parquet:
+          cache: true
+          persist: true
+      - data/features/feature_names.json:
+          cache: true
+      - data/features/feature_transformers.pkl:
+          cache: true
+    metrics:
+      - data/features/feature_metrics.json:
+          cache: false
+    plots:
+      - data/features/feature_importance.png
+      - data/features/correlation_matrix.png
+    
+  # Stage 5: Feature Selection
+  feature_selection:
+    cmd: python -m src.features.selection
+    deps:
+      - src/features/selection.py
+      - data/features/feature_matrix.parquet
+    params:
+      - params.yaml:
+          - feature_engineering
+          - data_preprocessing.n_features
+    outs:
+      - data/features/selected_features.parquet:
+          cache: true
+          persist: true
+      - data/features/selected_feature_names.json:
+          cache: true
+    metrics:
+      - data/features/selection_metrics.json:
+          cache: false
+    
+  # Stage 6: Model Training - Random Forest
+  train_random_forest:
+    cmd: python -m src.models.training --model random_forest
+    deps:
+      - src/models/training.py
+      - src/models/base_model.py
+      - data/features/selected_features.parquet
+    params:
+      - params.yaml:
+          - random_forest
+          - cross_validation
+          - mlflow
+    outs:
+      - models/staging/random_forest.pkl:
+          cache: true
+    metrics:
+      - models/staging/random_forest_metrics.json:
+          cache: false
+    plots:
+      - models/staging/random_forest_confusion_matrix.png
+      - models/staging/random_forest_roc_curve.png
+    
+  # Stage 7: Model Training - XGBoost
+  train_xgboost:
+    cmd: python -m src.models.training --model xgboost
+    deps:
+      - src/models/training.py
+      - src/models/base_model.py
+      - data/features/selected_features.parquet
+    params:
+      - params.yaml:
+          - xgboost
+          - cross_validation
+          - mlflow
+    outs:
+      - models/staging/xgboost.pkl:
+          cache: true
+    metrics:
+      - models/staging/xgboost_metrics.json:
+          cache: false
+    plots:
+      - models/staging/xgboost_confusion_matrix.png
+      - models/staging/xgboost_roc_curve.png
+    
+  # Stage 8: Model Training - LightGBM
+  train_lightgbm:
+    cmd: python -m src.models.training --model lightgbm
+    deps:
+      - src/models/training.py
+      - src/models/base_model.py
+      - data/features/selected_features.parquet
+    params:
+      - params.yaml:
+          - lightgbm
+          - cross_validation
+          - mlflow
+    outs:
+      - models/staging/lightgbm.pkl:
+          cache: true
+    metrics:
+      - models/staging/lightgbm_metrics.json:
+          cache: false
+    plots:
+      - models/staging/lightgbm_confusion_matrix.png
+      - models/staging/lightgbm_roc_curve.png
+    
+  # Stage 9: Model Evaluation & Comparison
+  model_evaluation:
+    cmd: python -m src.models.evaluation
+    deps:
+      - src/models/evaluation.py
+      - models/staging/random_forest.pkl
+      - models/staging/xgboost.pkl
+      - models/staging/lightgbm.pkl
+      - data/features/selected_features.parquet
+    params:
+      - params.yaml:
+          - model_evaluation
+          - cross_validation
+    outs:
+      - models/staging/evaluation_report.json:
+          cache: false
+      - models/staging/best_model_name.txt:
+          cache: false
+    metrics:
+      - models/staging/comparison_metrics.json:
+          cache: false
+    plots:
+      - models/staging/model_comparison.png
+      - models/staging/performance_summary.png
+    
+  # Stage 10: Model Registry & Promotion
+  register_model:
+    cmd: python -m src.models.registry
+    deps:
+      - src/models/registry.py
+      - models/staging/best_model_name.txt
+      - models/staging/evaluation_report.json
+    params:
+      - params.yaml:
+          - model_registry
+          - mlflow
+    outs:
+      - models/production/model_info.json:
+          cache: false
+    metrics:
+      - models/production/registry_metrics.json:
+          cache: false
+
+# Metrics aggregation
+metrics:
+  - data/raw/ingestion_metrics.json
+  - data/processed/preprocessing_metrics.json
+  - data/features/feature_metrics.json
+  - data/features/selection_metrics.json
+  - models/staging/random_forest_metrics.json
+  - models/staging/xgboost_metrics.json
+  - models/staging/lightgbm_metrics.json
+  - models/staging/comparison_metrics.json
+  - models/production/registry_metrics.json
+
+# Plots aggregation
+plots:
+  - data/processed/missing_values.png
+  - data/processed/outliers.png
+  - data/features/feature_importance.png
+  - data/features/correlation_matrix.png
+  - models/staging/random_forest_confusion_matrix.png
+  - models/staging/xgboost_confusion_matrix.png
+  - models/staging/lightgbm_confusion_matrix.png
+  - models/staging/model_comparison.png
+  - models/staging/performance_summary.png

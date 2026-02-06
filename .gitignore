@@ -1,0 +1,165 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+atlas/
+astrogeo/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+.settings/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# ML & Data Science
+mlruns/
+mlartifacts/
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+*.model
+*.onnx
+models/production/*.pkl
+models/staging/*.pkl
+
+# Data
+data/raw/*
+data/processed/*
+data/features/*
+data/external/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/features/.gitkeep
+!data/external/.gitkeep
+*.csv
+*.parquet
+*.feather
+*.arrow
+
+# DVC
+.dvc/tmp
+.dvc/cache
+*.dvc.tmp
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Logs
+logs/
+*.log
+log/
+
+# Testing
+.coverage
+.pytest_cache/
+.tox/
+htmlcov/
+.hypothesis/
+*.cover
+*.py,cover
+.cache
+nosetests.xml
+coverage.xml
+*.coveragerc
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Kubernetes
+*.kubeconfig
+
+# AWS
+*.pem
+.aws/
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.crt
+credentials.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Monitoring
+prometheus/data/
+grafana/data/
+
+# Node (if using any JS tools)
+node_modules/
+package-lock.json
+
+# Local S3
+local_s3/

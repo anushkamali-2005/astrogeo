@@ -1,0 +1,235 @@
+# ============================================================================
+# Docker Compose - Full Stack Local Development
+# Services: API, PostgreSQL, Redis, MLflow
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # PostgreSQL with PostGIS
+  # ==========================================================================
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: astrogeo-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-astrogeo_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-astrogeo_db}
+      POSTGRES_INITDB_ARGS: "-E UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_postgis.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - astrogeo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-astrogeo_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Redis (Cache & Task Queue)
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: astrogeo-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - astrogeo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # MLflow Tracking Server
+  # ==========================================================================
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.9.2
+    container_name: astrogeo-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      - BACKEND_STORE_URI=postgresql://${POSTGRES_USER:-astrogeo_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-astrogeo_db}
+      - DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://${POSTGRES_USER:-astrogeo_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-astrogeo_db}
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    volumes:
+      - mlflow_data:/mlflow
+    networks:
+      - astrogeo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================================
+  # FastAPI Application
+  # ==========================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: astrogeo-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Application
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - SECRET_KEY=${SECRET_KEY}
+      
+      # Database
+      - POSTGRES_USER=${POSTGRES_USER:-astrogeo_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-astrogeo_db}
+      
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      
+      # MLflow
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      
+      # OpenAI
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # AWS (Optional)
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+    networks:
+      - astrogeo-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      uvicorn src.api.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --log-level info
+
+  # ==========================================================================
+  # Prometheus (Optional - Monitoring)
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: astrogeo-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - astrogeo-network
+    profiles:
+      - monitoring
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Grafana (Optional - Dashboards)
+  # ==========================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: astrogeo-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./configs/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./configs/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - astrogeo-network
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+    restart: unless-stopped
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  astrogeo-network:
+    driver: bridge
+    name: astrogeo-network
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres_data:
+    name: astrogeo-postgres-data
+  redis_data:
+    name: astrogeo-redis-data
+  mlflow_data:
+    name: astrogeo-mlflow-data
+  prometheus_data:
+    name: astrogeo-prometheus-data
+  grafana_data:
+    name: astrogeo-grafana-data
+
+# ============================================================================
+# USAGE INSTRUCTIONS
+# ============================================================================
+# 
+# 1. Start all services:
+#    docker-compose up -d
+#
+# 2. Start with monitoring:
+#    docker-compose --profile monitoring up -d
+#
+# 3. View logs:
+#    docker-compose logs -f api
+#
+# 4. Stop all services:
+#    docker-compose down
+#
+# 5. Remove all data:
+#    docker-compose down -v
+#
+# 6. Rebuild API:
+#    docker-compose build api
+#    docker-compose up -d api
+#
+# Access points:
+# - API: http://localhost:8000
+# - API Docs: http://localhost:8000/docs
+# - MLflow: http://localhost:5000
+# - PostgreSQL: localhost:5432
+# - Redis: localhost:6379
+# - Prometheus: http://localhost:9090 (with monitoring profile)
+# - Grafana: http://localhost:3000 (with monitoring profile)
+#
+# ============================================================================
