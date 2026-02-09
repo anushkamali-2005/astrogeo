@@ -52,7 +52,7 @@ def hash_password(password: str) -> str:
     Example:
         >>> hashed = hash_password("mypassword")
     """
-    return pwd_context.hash(password)
+    return pwd_context.hash(password)  # type: ignore[no-any-return]
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -69,7 +69,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Example:
         >>> is_valid = verify_password("mypassword", hashed)
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)  # type: ignore[no-any-return]
 
 
 # ============================================================================
@@ -114,7 +114,7 @@ class JWTManager:
 
         encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-        return encoded_jwt
+        return str(encoded_jwt)
 
     @staticmethod
     def create_refresh_token(
@@ -141,7 +141,7 @@ class JWTManager:
 
         encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
-        return encoded_jwt
+        return str(encoded_jwt)
 
     @staticmethod
     def verify_token(token: str, token_type: str = "access") -> Dict[str, Any]:
@@ -166,7 +166,7 @@ class JWTManager:
             if payload.get("type") != token_type:
                 raise InvalidTokenError(details={"reason": f"Expected {token_type} token"})
 
-            return payload
+            return payload  # type: ignore[no-any-return]
 
         except jwt.ExpiredSignatureError:
             raise TokenExpiredError(details={"expired_at": datetime.utcnow().isoformat()})
@@ -186,7 +186,7 @@ class JWTManager:
             Dict: Decoded payload
         """
         try:
-            return jwt.decode(token, options={"verify_signature": False})
+            return jwt.decode(token, options={"verify_signature": False}, algorithms=[settings.ALGORITHM])  # type: ignore[no-any-return]
         except JWTError:
             return {}
 

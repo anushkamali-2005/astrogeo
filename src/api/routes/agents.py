@@ -81,7 +81,7 @@ async def save_agent_execution(
     )
 
     if result.get("status") == "failed":
-        execution.error_message = result.get("error")
+        execution.error_message = result.get("error")  # type: ignore[assignment]
 
     db.add(execution)
     await db.commit()
@@ -190,13 +190,28 @@ async def execute_agent(
         # Save failed execution
         if request.save_to_database:
             user_id = UUID(current_user.get("sub")) if current_user.get("sub") else None
-            await save_agent_execution(
+            execution = await save_agent_execution(
                 db=db,
                 agent_name=request.agent_type,
                 task=request.task,
                 result={"status": "failed", "error": str(e)},
                 user_id=user_id,
             )
+            response_data = AgentExecutionResponse(
+                id=execution.id,
+                agent_name=execution.agent_name,
+                task=execution.task,
+                status=execution.status,
+                result=execution.result,  # Use execution.result which contains the error
+                execution_time_ms=execution.execution_time_ms,
+                created_at=execution.created_at,
+                error_message=execution.error_message,
+            )
+            return {
+                "success": False,
+                "data": response_data,
+                "message": f"Agent '{request.agent_type}' execution failed",
+            }
 
         raise AgentExecutionError(agent_name=request.agent_type, details={"error": str(e)})
 
@@ -331,7 +346,7 @@ async def get_agent_history(
         "total": total,
         "limit": limit,
         "offset": offset,
-        "has_more": (offset + limit) < total,
+        "has_more": (offset + limit) < (total or 0),
     }
 
 

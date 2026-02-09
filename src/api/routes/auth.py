@@ -345,7 +345,7 @@ async def login(
         raise InvalidCredentialsError(details={"reason": "User not found"})
 
     # Verify password
-    if not verify_password(data.password, user.hashed_password):
+    if not verify_password(data.password, user.hashed_password):  # type: ignore[arg-type]
         logger.warning("Invalid password attempt", extra={"email": data.email})
         raise InvalidCredentialsError(details={"reason": "Invalid password"})
 
@@ -354,7 +354,7 @@ async def login(
         raise InvalidCredentialsError(details={"reason": "Account is disabled"})
 
     # Update last login
-    await user_repo.update(user.id, last_login=datetime.utcnow())
+    await user_repo.update(user.id, last_login=datetime.utcnow())  # type: ignore[arg-type]
 
     # Create tokens
     token_data = {
@@ -545,7 +545,7 @@ async def change_password(
         raise RecordNotFoundError("User", current_user["id"])
 
     # Verify current password
-    if not verify_password(data.current_password, user.hashed_password):
+    if not verify_password(data.current_password, user.hashed_password):  # type: ignore[arg-type]
         raise InvalidCredentialsError(details={"reason": "Current password is incorrect"})
 
     # Hash new password
@@ -636,7 +636,7 @@ async def reset_password(data: ResetPasswordRequest, db: AsyncSession = Depends(
             raise RecordNotFoundError("User", user_id)
 
         new_hashed = hash_password(data.new_password)
-        await user_repo.update(user.id, hashed_password=new_hashed)
+        await user_repo.update(user.id, hashed_password=new_hashed)  # type: ignore[arg-type]
 
         logger.info("Password reset successful", extra={"user_id": str(user.id)})
 

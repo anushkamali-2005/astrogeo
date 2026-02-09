@@ -150,7 +150,7 @@ class BaseAgent(ABC):
 
             # Create executor
             agent_executor = AgentExecutor(
-                agent=agent,
+                agent=agent,  # type: ignore[arg-type]
                 tools=self.tools,
                 memory=self.memory,
                 max_iterations=self.max_iterations,

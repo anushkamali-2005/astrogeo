@@ -85,12 +85,14 @@ class FileUploadService:
             # Validate file
             path = Path(file_path)
             if not path.exists():
-                raise FileUploadError(filename=file_path, details={"error": "File not found"})
+                raise FileUploadError(
+                    message=f"File not found: {file_path}", details={"error": "File not found"}
+                )
 
             file_size = path.stat().st_size
             if file_size > settings.MAX_UPLOAD_SIZE:
                 raise FileUploadError(
-                    filename=file_path,
+                    message=f"File too large: {file_path}",
                     details={
                         "error": "File too large",
                         "size": file_size,
@@ -141,7 +143,9 @@ class FileUploadService:
 
         except ClientError as e:
             logger.error("S3 upload failed", error=e)
-            raise FileUploadError(filename=file_path, details={"error": str(e)})
+            raise FileUploadError(
+                message=f"S3 upload failed: {file_path}", details={"error": str(e)}
+            )
 
     def generate_presigned_url(self, s3_key: str, expiration: int = 3600) -> str:
         """
@@ -162,11 +166,13 @@ class FileUploadService:
             )
 
             logger.debug(f"Generated presigned URL for {s3_key}")
-            return url
+            return str(url)
 
         except ClientError as e:
             logger.error("Failed to generate presigned URL", error=e)
-            raise FileUploadError(filename=s3_key, details={"error": str(e)})
+            raise FileUploadError(
+                message=f"Failed to generate presigned URL: {s3_key}", details={"error": str(e)}
+            )
 
     async def delete_file(self, s3_key: str) -> bool:
         """

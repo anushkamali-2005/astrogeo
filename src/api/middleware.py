@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional
 
 from fastapi import Request, Response, status
+from fastapi.applications import FastAPI
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
@@ -346,7 +347,7 @@ class CorrelationIDMiddleware(BaseHTTPMiddleware):
 # ============================================================================
 
 
-def configure_middleware(app: ASGIApp) -> None:
+def setup_middleware(app: FastAPI) -> None:
     """
     Configure all middleware for the application.
 
@@ -381,5 +382,5 @@ __all__ = [
     "RequestLoggingMiddleware",
     "CompressionMiddleware",
     "CorrelationIDMiddleware",
-    "configure_middleware",
+    "setup_middleware",
 ]

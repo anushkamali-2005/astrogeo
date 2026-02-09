@@ -235,7 +235,7 @@ class BaseRepository(Generic[ModelType]):
                     query = query.where(getattr(self.model, key) == value)
 
             result = await self.db.execute(query)
-            return result.scalar()
+            return int(result.scalar() or 0)
 
         except Exception as e:
             logger.error(f"Failed to count {self.model.__name__}", error=e)

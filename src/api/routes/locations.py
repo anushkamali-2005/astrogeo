@@ -139,7 +139,7 @@ class LocationWithDistance(BaseModel):
 class BulkCreateRequest(BaseModel):
     """Bulk location creation request."""
 
-    locations: List[LocationCreateRequest] = Field(..., max_items=1000)
+    locations: List[LocationCreateRequest] = Field(..., max_length=1000)
 
 
 class BulkCreateResponse(BaseModel):
@@ -307,7 +307,7 @@ async def list_locations(
     location_repo = LocationRepository(db)
 
     # Build filters
-    filters = {}
+    filters: Dict[str, Any] = {}
     if country:
         locations = await location_repo.get_by_country(country, limit=limit)
     elif location_type:
@@ -643,7 +643,7 @@ try:
     from geoalchemy2 import Geography
 except ImportError:
     # Fallback if geoalchemy2 not fully installed
-    Geography = lambda **kwargs: text("geography")
+    Geography = lambda **kwargs: text("geography")  # type: ignore[assignment,misc]
 
 
 # Export router

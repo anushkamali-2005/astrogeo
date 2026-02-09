@@ -141,8 +141,8 @@ class MonitoringService(metaclass=SingletonMeta):
                 pool_status = {
                     "size": pool.size(),
                     "checked_in": pool.checkedin(),
-                    "checked_out": pool.checkedout(),
-                    "overflow": pool.overflow(),
+                    "checked_out": pool.checkedout(),  # type: ignore[union-attr]
+                    "overflow": pool.overflow(),  # type: ignore[union-attr]
                 }
 
                 return {

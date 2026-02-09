@@ -160,7 +160,7 @@ def train_model_task(
     except Exception as e:
         celery_logger.error("Model training failed", extra={"error": str(e)})
         raise TaskExecutionError(
-            task_name="train_model", details={"model_id": model_id, "error": str(e)}
+            agent_name="train_model", details={"model_id": model_id, "error": str(e)}
         )
 
 
@@ -205,7 +205,7 @@ def evaluate_model_task(self, model_id: str, test_dataset_id: str) -> Dict[str, 
     except Exception as e:
         celery_logger.error("Model evaluation failed", extra={"error": str(e)})
         raise TaskExecutionError(
-            task_name="evaluate_model", details={"model_id": model_id, "error": str(e)}
+            agent_name="evaluate_model", details={"model_id": model_id, "error": str(e)}
         )
 
 
@@ -266,7 +266,7 @@ def batch_predict_task(
     except Exception as e:
         celery_logger.error("Batch prediction failed", extra={"error": str(e)})
         raise TaskExecutionError(
-            task_name="batch_predict", details={"model_id": model_id, "error": str(e)}
+            agent_name="batch_predict", details={"model_id": model_id, "error": str(e)}
         )
 
 
@@ -286,7 +286,7 @@ def process_dataset_task(self, dataset_id: str, processing_steps: List[str]) -> 
         processing_steps: List of processing steps
 
     Returns:
-        dict: Processing results
+            dict: Processing results
     """
     celery_logger.info(
         "Starting dataset processing", extra={"dataset_id": dataset_id, "steps": processing_steps}
@@ -313,7 +313,7 @@ def process_dataset_task(self, dataset_id: str, processing_steps: List[str]) -> 
     except Exception as e:
         celery_logger.error("Dataset processing failed", extra={"error": str(e)})
         raise TaskExecutionError(
-            task_name="process_dataset", details={"dataset_id": dataset_id, "error": str(e)}
+            agent_name="process_dataset", details={"dataset_id": dataset_id, "error": str(e)}
         )
 
 
@@ -355,7 +355,7 @@ def extract_features_task(self, dataset_id: str, feature_set: str) -> Dict[str, 
     except Exception as e:
         celery_logger.error("Feature extraction failed", extra={"error": str(e)})
         raise TaskExecutionError(
-            task_name="extract_features", details={"dataset_id": dataset_id, "error": str(e)}
+            agent_name="extract_features", details={"dataset_id": dataset_id, "error": str(e)}
         )
 
 
@@ -399,7 +399,7 @@ def cleanup_old_data_task(self, days_old: int = 30) -> Dict[str, Any]:
 
     except Exception as e:
         celery_logger.error("Cleanup failed", extra={"error": str(e)})
-        raise TaskExecutionError(task_name="cleanup_old_data", details={"error": str(e)})
+        raise TaskExecutionError(agent_name="cleanup_old_data", details={"error": str(e)})
 
 
 @celery_app.task(base=AstroGeoTask, bind=True, name="tasks.archive_old_models")
@@ -432,7 +432,7 @@ def archive_old_models_task(self, days_old: int = 90) -> Dict[str, Any]:
 
     except Exception as e:
         celery_logger.error("Model archival failed", extra={"error": str(e)})
-        raise TaskExecutionError(task_name="archive_old_models", details={"error": str(e)})
+        raise TaskExecutionError(agent_name="archive_old_models", details={"error": str(e)})
 
 
 # ============================================================================
@@ -469,7 +469,7 @@ class TaskService:
         """
         task = train_model_task.delay(model_id, dataset_id, hyperparameters)
         logger.info("Submitted training task", extra={"task_id": task.id, "model_id": model_id})
-        return task.id
+        return str(task.id)
 
     @staticmethod
     def submit_prediction_task(
@@ -490,7 +490,7 @@ class TaskService:
         logger.info(
             "Submitted prediction task", extra={"task_id": task.id, "num_samples": len(input_data)}
         )
-        return task.id
+        return str(task.id)
 
     @staticmethod
     def get_task_status(task_id: str) -> Dict[str, Any]:

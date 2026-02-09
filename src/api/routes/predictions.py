@@ -7,7 +7,7 @@ Author: Production Team
 Version: 1.0.0
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -229,13 +229,12 @@ async def get_prediction(
 async def submit_feedback(
     prediction_id: UUID,
     feedback_score: int,
-    feedback_comment: str = None,
+    feedback_comment: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ) -> SuccessResponse[Dict[str, str]]:
     """
     Submit prediction feedback.
-
     Args:
         prediction_id: Prediction ID
         feedback_score: Score (1-5)
@@ -354,7 +353,7 @@ async def get_user_predictions(
                 "total": total,
                 "limit": limit,
                 "offset": offset,
-                "has_more": (offset + limit) < total,
+                "has_more": (offset + limit) < (total or 0),
             },
             message=f"Retrieved {len(predictions)} predictions",
         )

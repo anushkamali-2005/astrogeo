@@ -391,7 +391,8 @@ class DataAgent(BaseAgent):
         Returns:
             list: List of LangChain tools
         """
-        tools = [
+        # Create data agent tools
+        tools: list[BaseTool] = [
             StructuredTool.from_function(
                 func=ingest_data_tool,
                 name="ingest_data",

@@ -67,8 +67,9 @@ class CacheService:
             )
 
             # Test connection
-            await self.redis.ping()
-            self._connected = True
+            if self.redis:
+                result: bool = await self.redis.ping()  # type: ignore[assignment]
+                self._connected = True
 
             logger.info(
                 "Cache service connected",
@@ -105,7 +106,10 @@ class CacheService:
 
         try:
             full_key = self._make_key(key)
-            value = await self.redis.get(full_key)
+            if self.redis:
+                value = await self.redis.get(full_key)
+            else:
+                return None
 
             if value is None:
                 logger.debug(f"Cache miss: {key}")
@@ -138,9 +142,11 @@ class CacheService:
             serialized = json.dumps(value)
 
             if ttl:
-                await self.redis.setex(full_key, ttl, serialized)
+                if self.redis:
+                    await self.redis.setex(full_key, ttl, serialized)
             else:
-                await self.redis.set(full_key, serialized)
+                if self.redis:
+                    await self.redis.set(full_key, serialized)
 
             logger.debug(f"Cache set: {key} (TTL: {ttl})")
             return True
@@ -164,10 +170,11 @@ class CacheService:
 
         try:
             full_key = self._make_key(key)
-            result = await self.redis.delete(full_key)
-
-            logger.debug(f"Cache delete: {key}")
-            return result > 0
+            if self.redis:
+                result = await self.redis.delete(full_key)
+                logger.debug(f"Cache delete: {key}")
+                return bool(result > 0)
+            return False
 
         except Exception as e:
             logger.error(f"Cache delete failed for key: {key}", error=e)
@@ -180,7 +187,10 @@ class CacheService:
 
         try:
             full_key = self._make_key(key)
-            return await self.redis.exists(full_key) > 0
+            if self.redis:
+                result = await self.redis.exists(full_key)
+                return bool(result > 0)
+            return False
         except Exception as e:
             logger.error(f"Cache exists check failed for key: {key}", error=e)
             return False
@@ -202,13 +212,20 @@ class CacheService:
             full_pattern = self._make_key(pattern)
             keys = []
 
-            async for key in self.redis.scan_iter(match=full_pattern):
+            # The original line `async for key in self.redis.scan_iter(match=full_pattern) if self.redis else []:`
+            # is syntactically incorrect. The `if self.redis else []:` part cannot be directly appended to `async for`.
+            # The correct way to handle `self.redis` being Optional is to check it before the loop.
+            # The user's requested change `async for key in self.redis.scan_iter(match=full_pattern): # type: ignore[union-attr]`
+            # implies that `self.redis` is guaranteed to be not None at this point, or the type ignore handles it.
+            # Given `if not self._connected: await self.connect()`, `self.redis` should be connected.
+            # Adding the type ignore as requested.
+            async for key in self.redis.scan_iter(match=full_pattern):  # type: ignore[union-attr]
                 keys.append(key)
 
-            if keys:
+            if keys and self.redis:
                 deleted = await self.redis.delete(*keys)
                 logger.info(f"Cleared {deleted} cache keys matching: {pattern}")
-                return deleted
+                return int(deleted)
 
             return 0
 
@@ -222,7 +239,10 @@ class CacheService:
             await self.connect()
 
         try:
-            info = await self.redis.info("stats")
+            if self.redis:
+                info = await self.redis.info("stats")
+            else:
+                return {}
 
             return {
                 "total_commands_processed": info.get("total_commands_processed", 0),

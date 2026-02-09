@@ -293,7 +293,7 @@ class MLAgent(BaseAgent):
         Returns:
             list: List of LangChain tools
         """
-        tools = [
+        tools: list[BaseTool] = [
             StructuredTool.from_function(
                 func=train_model_tool,
                 name="train_model",

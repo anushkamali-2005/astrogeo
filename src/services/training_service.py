@@ -89,7 +89,7 @@ class ModelTrainingService:
             self.experiment_id = mlflow.create_experiment(experiment_name)
         except Exception:
             experiment = mlflow.get_experiment_by_name(experiment_name)
-            self.experiment_id = experiment.experiment_id if experiment else None
+            self.experiment_id = str(experiment.experiment_id) if experiment else "default"
 
         logger.info(
             "Training service initialized",
@@ -189,7 +189,7 @@ class ModelTrainingService:
 
                 # Get run info
                 run = mlflow.active_run()
-                run_id = run.info.run_id
+                run_id = run.info.run_id if run and run.info else "unknown"
 
                 logger.info(
                     "Model training completed",
@@ -220,7 +220,8 @@ class ModelTrainingService:
         except Exception as e:
             logger.error("Model training failed", error=e)
             raise ModelTrainingError(
-                model_id=model_id, details={"error": str(e), "model_type": model_type}
+                message=f"Model training failed: {model_id}",
+                details={"error": str(e), "model_type": model_type, "model_id": model_id},
             )
 
     async def _load_data(
@@ -314,7 +315,8 @@ class ModelTrainingService:
 
         if model_type not in models:
             raise ModelTrainingError(
-                model_id="unknown", details={"error": f"Unknown model type: {model_type}"}
+                message=f"Unknown model type: {model_type}",
+                details={"error": f"Unknown model type: {model_type}"},
             )
 
         model_class = models[model_type]
@@ -410,7 +412,9 @@ class ModelTrainingService:
             latest_version = model_versions[0]
 
             # Get run details
-            run = mlflow_client.get_run(latest_version.run_id)
+            run = (
+                mlflow_client.get_run(str(latest_version.run_id)) if latest_version.run_id else None
+            )
 
             return {
                 "status": "found",

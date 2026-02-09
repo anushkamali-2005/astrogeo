@@ -198,6 +198,68 @@ class Settings(BaseSettings):
 
     # Sentry Integration
     SENTRY_DSN: Optional[str] = Field(default=None, env="SENTRY_DSN")
+    SENTRY_TRACES_SAMPLE_RATE: float = Field(default=0.1, env="SENTRY_TRACES_SAMPLE_RATE")
+    SENTRY_PROFILES_SAMPLE_RATE: float = Field(default=0.1, env="SENTRY_PROFILES_SAMPLE_RATE")
+
+    # ============================================================================
+    # CELERY SETTINGS (Background Tasks)
+    # ============================================================================
+    CELERY_BROKER_URL: Optional[str] = None
+    CELERY_RESULT_BACKEND: Optional[str] = None
+
+    @field_validator("CELERY_BROKER_URL", mode="before")
+    @classmethod
+    def assemble_celery_broker(cls, v: Optional[str], info) -> str:
+        """Construct Celery broker URL (uses Redis)."""
+        if isinstance(v, str) and v:
+            return v
+        # Reuse REDIS_URL if already configured
+        redis_url = info.data.get("REDIS_URL")
+        if redis_url:
+            return redis_url
+        # Construct from Redis settings
+        values = info.data
+        password = values.get("REDIS_PASSWORD")
+        auth = f":{password}@" if password else ""
+        return (
+            f"redis://{auth}{values.get('REDIS_HOST')}:"
+            f"{values.get('REDIS_PORT')}/{values.get('REDIS_DB', 0)}"
+        )
+
+    @field_validator("CELERY_RESULT_BACKEND", mode="before")
+    @classmethod
+    def assemble_celery_backend(cls, v: Optional[str], info) -> str:
+        """Construct Celery result backend URL (uses Redis)."""
+        if isinstance(v, str) and v:
+            return v
+        # Reuse REDIS_URL if already configured
+        redis_url = info.data.get("REDIS_URL")
+        if redis_url:
+            return redis_url
+        # Construct from Redis settings
+        values = info.data
+        password = values.get("REDIS_PASSWORD")
+        auth = f":{password}@" if password else ""
+        return (
+            f"redis://{auth}{values.get('REDIS_HOST')}:"
+            f"{values.get('REDIS_PORT')}/{values.get('REDIS_DB', 0)}"
+        )
+
+    # ============================================================================
+    # EMAIL SETTINGS (SendGrid)
+    # ============================================================================
+    SENDGRID_API_KEY: Optional[str] = Field(default=None, env="SENDGRID_API_KEY")
+    FROM_EMAIL: str = Field(default="no-reply@astrogeo.ai", env="FROM_EMAIL")
+    FROM_NAME: str = Field(default="AstroGeo AI", env="FROM_NAME")
+
+    # ============================================================================
+    # FILE UPLOAD SETTINGS
+    # ============================================================================
+    MAX_UPLOAD_SIZE: int = Field(
+        default=104857600,
+        env="MAX_UPLOAD_SIZE",
+        description="Max upload size in bytes (default 100MB)",
+    )
     SENTRY_ENVIRONMENT: Optional[str] = Field(default=None, env="SENTRY_ENVIRONMENT")
 
     # ============================================================================

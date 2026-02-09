@@ -641,7 +641,8 @@ class AstroAgent(BaseAgent):
         Time complexity: O(1)
         Space complexity: O(1)
         """
-        tools = [
+        # Create astro tools
+        tools: list[BaseTool] = [
             StructuredTool.from_function(
                 func=track_celestial_object_tool,
                 name="track_celestial_object",

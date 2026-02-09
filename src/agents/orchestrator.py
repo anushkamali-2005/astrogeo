@@ -305,7 +305,7 @@ class AgentOrchestrator:
             subtasks.append(subtask)
 
         # Sort by priority (higher priority first)
-        subtasks.sort(key=lambda x: x["priority"], reverse=True)
+        subtasks.sort(key=lambda x: int(x["priority"]), reverse=True)  # type: ignore[arg-type]
 
         logger.info("Task decomposed into subtasks", extra={"num_subtasks": len(subtasks)})
 
@@ -427,14 +427,15 @@ class AgentOrchestrator:
         # Collect failed results
         failed_results = [r for r in agent_results if r["status"] == "failed"]
 
-        # Aggregate
-        aggregated = {
+        # Initialize aggregation structure
+        aggregated: Dict[str, Any] = {
             "task": original_task,
             "total_agents": len(agent_results),
             "successful_agents": len(successful_results),
             "failed_agents": len(failed_results),
             "success_rate": len(successful_results) / len(agent_results) if agent_results else 0,
             "insights": [],
+            "data_collected": {},
             "recommendations": [],
             "summary": "",
         }

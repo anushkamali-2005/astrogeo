@@ -14,6 +14,7 @@ from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+from sentry_sdk.types import Event
 
 from src.core.config import settings
 from src.core.logging import get_logger
@@ -45,7 +46,7 @@ def init_sentry() -> None:
         sentry_sdk.init(
             dsn=settings.SENTRY_DSN,
             environment=settings.ENVIRONMENT,
-            release=f"astrogeo@{settings.VERSION}",
+            release=f"astrogeo@{settings.APP_VERSION}",
             # Integrations
             integrations=[
                 FastApiIntegration(transaction_style="endpoint"),
@@ -67,7 +68,14 @@ def init_sentry() -> None:
 
         logger.info(
             "Sentry initialized",
-            extra={"environment": settings.ENVIRONMENT, "release": f"astrogeo@{settings.VERSION}"},
+            extra={
+                "environment": settings.ENVIRONMENT,
+                "release": f"astrogeo@{settings.APP_VERSION}",
+            },
+        )
+        sentry_sdk.set_context(
+            "app",
+            {"environment": settings.ENVIRONMENT, "release": f"astrogeo@{settings.APP_VERSION}"},
         )
 
     except Exception as e:
@@ -79,7 +87,7 @@ def init_sentry() -> None:
 # ============================================================================
 
 
-def before_send_filter(event: Dict[str, Any], hint: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def before_send_filter(event: Event, hint: Dict[str, Any]) -> Event | None:
     """
     Filter events before sending to Sentry.
 
@@ -192,7 +200,7 @@ def capture_exception(exception: Exception, **extra: Any) -> str:
 
     logger.error("Exception captured by Sentry", extra={"sentry_event_id": event_id})
 
-    return event_id
+    return event_id or ""
 
 
 def capture_message(message: str, level: str = "info", **extra: Any) -> str:
@@ -211,11 +219,11 @@ def capture_message(message: str, level: str = "info", **extra: Any) -> str:
         with sentry_sdk.push_scope() as scope:
             for key, value in extra.items():
                 scope.set_extra(key, value)
-            event_id = sentry_sdk.capture_message(message, level)
+            event_id = sentry_sdk.capture_message(message, level)  # type: ignore[arg-type]
     else:
-        event_id = sentry_sdk.capture_message(message, level)
+        event_id = sentry_sdk.capture_message(message, level)  # type: ignore[arg-type]
 
-    return event_id
+    return event_id or ""
 
 
 # Export

@@ -12,7 +12,7 @@ Author: Production Team
 Version: 1.0.0
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -71,7 +71,7 @@ async def require_admin(current_user: Dict[str, Any] = Depends(get_current_user)
     description="Get list of all ML models in the system",
 )
 async def list_models(
-    status: str = None,
+    status: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
@@ -153,13 +153,13 @@ async def deploy_model(
 
     # Update deployment status
     old_status = model.status
-    model.status = deploy_request.status
+    model.status = deploy_request.status  # type: ignore[assignment]
 
     # Add deployment metadata
     if deploy_request.status == "production":
         from datetime import datetime
 
-        model.deployed_at = datetime.utcnow()
+        model.deployed_at = datetime.utcnow()  # type: ignore[assignment]
         model.deployed_by = UUID(admin.get("sub"))
 
     await db.commit()
@@ -207,7 +207,7 @@ async def archive_model(
         raise RecordNotFoundError("MLModel", model_id)
 
     # Archive (soft delete)
-    model.status = "archived"
+    model.status = "archived"  # type: ignore[assignment]
     await db.commit()
 
     return {"success": True, "message": f"Model {model_id} archived successfully"}
@@ -225,7 +225,7 @@ async def archive_model(
     description="Get list of all users in the system",
 )
 async def list_users(
-    is_active: bool = None,
+    is_active: Optional[bool] = None,
     limit: int = 100,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
@@ -311,7 +311,7 @@ async def toggle_user_active(
         raise RecordNotFoundError("User", user_id)
 
     # Update status
-    user.is_active = is_active
+    user.is_active = is_active  # type: ignore[assignment]
     await db.commit()
 
     return {
@@ -381,11 +381,11 @@ async def get_system_stats(
     memory_percent = psutil.virtual_memory().percent
 
     stats = SystemStatsResponse(
-        total_users=total_users,
-        total_predictions=total_predictions,
-        total_models=total_models,
-        total_locations=total_locations,
-        active_agents=active_agents,
+        total_users=total_users or 0,
+        total_predictions=total_predictions or 0,
+        total_models=total_models or 0,
+        total_locations=total_locations or 0,
+        active_agents=active_agents or 0,
         uptime_seconds=0.0,  # Implement actual uptime tracking
         cpu_usage_percent=cpu_percent,
         memory_usage_percent=memory_percent,

@@ -188,7 +188,12 @@ class EmailService:
         Returns:
             dict: Send results
         """
-        results = {"total": len(recipients), "successful": 0, "failed": 0, "errors": []}
+        results: Dict[str, Any] = {
+            "total": len(recipients),
+            "successful": 0,
+            "failed": 0,
+            "errors": [],
+        }
 
         for recipient in recipients:
             try:

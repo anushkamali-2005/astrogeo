@@ -472,7 +472,8 @@ class GeoAgent(BaseAgent):
         Returns:
             list: List of LangChain tools
         """
-        tools = [
+        # Create GeoAgent tools
+        tools: list[BaseTool] = [
             StructuredTool.from_function(
                 func=geocode_tool,
                 name="geocode",

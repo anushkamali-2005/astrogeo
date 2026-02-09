@@ -249,6 +249,9 @@ class AgentService:
                 agent_types = [AgentType(agent) for agent in required_agents]
 
             # Execute orchestration
+            if self._orchestrator is None:
+                raise RuntimeError("Orchestrator not initialized")
+
             result = await self._orchestrator.execute(task=task, required_agents=agent_types)
 
             # Add metrics
@@ -388,7 +391,7 @@ class AgentService:
             "total": total,
             "limit": limit,
             "offset": offset,
-            "has_more": (offset + limit) < total,
+            "has_more": (offset + limit) < (total or 0),
         }
 
     async def get_agent_metrics(

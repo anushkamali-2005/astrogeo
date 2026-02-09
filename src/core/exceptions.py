@@ -435,6 +435,72 @@ class ServiceUnavailableError(BaseAPIException):
         )
 
 
+# ============================================================================
+# FILE UPLOAD EXCEPTIONS
+# ============================================================================
+
+
+class FileUploadError(BaseAPIException):
+    """File upload operation failed."""
+
+    def __init__(
+        self, message: str = "File upload failed", details: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__(
+            message=message,
+            error_code="UPLOAD_001",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            details=details,
+        )
+
+
+# ============================================================================
+# EMAIL SERVICE EXCEPTIONS
+# ============================================================================
+
+
+class EmailError(BaseAPIException):
+    """Email operation failed."""
+
+    def __init__(
+        self, message: str = "Email operation failed", details: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__(
+            message=message,
+            error_code="EMAIL_001",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            details=details,
+        )
+
+
+# ============================================================================
+# CACHE EXCEPTIONS
+# ============================================================================
+
+
+class CacheError(BaseAPIException):
+    """Cache operation failed."""
+
+    def __init__(
+        self, message: str = "Cache operation failed", details: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__(
+            message=message,
+            error_code="CACHE_001",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            details=details,
+        )
+
+
+# ============================================================================
+# TYPE ALIASES FOR CONSISTENCY
+# ============================================================================
+
+# Alias for backwards compatibility with different naming conventions
+ResourceNotFoundError = RecordNotFoundError
+TaskExecutionError = AgentExecutionError
+
+
 # Export public API
 __all__ = [
     "BaseAPIException",
@@ -468,4 +534,9 @@ __all__ = [
     "ExternalServiceError",
     "MLflowError",
     "ServiceUnavailableError",
+    "FileUploadError",
+    "EmailError",
+    "CacheError",
+    "ResourceNotFoundError",  # Alias
+    "TaskExecutionError",  # Alias
 ]
