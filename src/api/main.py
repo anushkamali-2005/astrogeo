@@ -12,14 +12,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Import routers
+from src.api.routes import admin, agents, health
+from src.api.routes.predictions import router as predictions_router
 from src.core.config import settings
 from src.core.logging import get_logger
-from src.database.connection import init_db, close_db
-
-# Import routers
-from src.api.routes import health, agents, admin
-from src.api.routes.predictions import router as predictions_router
-
+from src.database.connection import close_db, init_db
 
 logger = get_logger(__name__)
 
@@ -27,6 +25,7 @@ logger = get_logger(__name__)
 # ============================================================================
 # LIFESPAN MANAGEMENT
 # ============================================================================
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -38,9 +37,9 @@ async def lifespan(app: FastAPI):
     logger.info("Starting AstroGeo AI API")
     await init_db()
     logger.info("Application startup complete")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down AstroGeo AI API")
     await close_db()
@@ -58,7 +57,7 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
 )
 
 
@@ -80,6 +79,7 @@ app.add_middleware(
 # ROUTES
 # ============================================================================
 
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -89,7 +89,7 @@ async def root():
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
         "status": "running",
-        "docs": "/docs"
+        "docs": "/docs",
     }
 
 
@@ -106,12 +106,12 @@ app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "src.api.main:app",
         host=settings.API_HOST,
         port=settings.API_PORT,
         reload=settings.DEBUG,
         workers=1 if settings.DEBUG else settings.API_WORKERS,
-        log_level=settings.LOG_LEVEL.lower()
+        log_level=settings.LOG_LEVEL.lower(),
     )

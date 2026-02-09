@@ -11,27 +11,22 @@ Author: Production Team
 Version: 1.0.0
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, text
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from geoalchemy2.functions import ST_AsGeoJSON, ST_Distance, ST_DWithin, ST_MakePoint, ST_SetSRID
 from pydantic import BaseModel, Field, validator
-from geoalchemy2.functions import ST_AsGeoJSON, ST_DWithin, ST_Distance, ST_MakePoint, ST_SetSRID
+from sqlalchemy import func, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import settings
+from src.core.exceptions import DatabaseError, RecordNotFoundError, ValidationError
 from src.core.logging import get_logger
 from src.core.security import get_current_user
-from src.core.exceptions import (
-    RecordNotFoundError,
-    ValidationError,
-    DatabaseError
-)
 from src.database.connection import get_db
-from src.database.repositories import LocationRepository
 from src.database.models import Location
-
+from src.database.repositories import LocationRepository
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/locations", tags=["Locations"])
@@ -41,11 +36,13 @@ router = APIRouter(prefix="/locations", tags=["Locations"])
 # REQUEST/RESPONSE SCHEMAS
 # ============================================================================
 
+
 class GeoJSONPoint(BaseModel):
     """GeoJSON Point geometry."""
+
     type: str = Field(default="Point", description="Geometry type")
     coordinates: List[float] = Field(..., description="[longitude, latitude]")
-    
+
     @validator("coordinates")
     def validate_coordinates(cls, v):
         """Validate coordinates format."""
@@ -61,6 +58,7 @@ class GeoJSONPoint(BaseModel):
 
 class LocationCreateRequest(BaseModel):
     """Location creation request."""
+
     name: str = Field(..., min_length=1, max_length=255, description="Location name")
     description: str | None = Field(None, description="Location description")
     latitude: float = Field(..., ge=-90, le=90, description="Latitude")
@@ -75,6 +73,7 @@ class LocationCreateRequest(BaseModel):
 
 class LocationUpdateRequest(BaseModel):
     """Location update request."""
+
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = None
     latitude: float | None = Field(None, ge=-90, le=90)
@@ -89,6 +88,7 @@ class LocationUpdateRequest(BaseModel):
 
 class LocationResponse(BaseModel):
     """Location response with GeoJSON geometry."""
+
     id: UUID
     name: str
     description: str | None
@@ -103,13 +103,14 @@ class LocationResponse(BaseModel):
     metadata: Dict[str, Any]
     created_at: str
     updated_at: str
-    
+
     class Config:
         from_attributes = True
 
 
 class NearbySearchRequest(BaseModel):
     """Nearby location search request."""
+
     latitude: float = Field(..., ge=-90, le=90, description="Center latitude")
     longitude: float = Field(..., ge=-180, le=180, description="Center longitude")
     radius_km: float = Field(..., gt=0, le=10000, description="Search radius in kilometers")
@@ -119,6 +120,7 @@ class NearbySearchRequest(BaseModel):
 
 class LocationWithDistance(BaseModel):
     """Location with distance information."""
+
     id: UUID
     name: str
     description: str | None
@@ -136,11 +138,13 @@ class LocationWithDistance(BaseModel):
 
 class BulkCreateRequest(BaseModel):
     """Bulk location creation request."""
+
     locations: List[LocationCreateRequest] = Field(..., max_items=1000)
 
 
 class BulkCreateResponse(BaseModel):
     """Bulk creation response."""
+
     created_count: int
     locations: List[LocationResponse]
 
@@ -149,22 +153,20 @@ class BulkCreateResponse(BaseModel):
 # HELPER FUNCTIONS
 # ============================================================================
 
+
 def location_to_geojson(location: Location) -> Dict[str, Any]:
     """
     Convert location to GeoJSON format.
-    
+
     Args:
         location: Location model instance
-        
+
     Returns:
         dict: GeoJSON Feature
     """
     return {
         "type": "Feature",
-        "geometry": {
-            "type": "Point",
-            "coordinates": [location.longitude, location.latitude]
-        },
+        "geometry": {"type": "Point", "coordinates": [location.longitude, location.latitude]},
         "properties": {
             "id": str(location.id),
             "name": location.name,
@@ -176,8 +178,8 @@ def location_to_geojson(location: Location) -> Dict[str, Any]:
             "location_type": location.location_type,
             "metadata": location.metadata or {},
             "created_at": location.created_at.isoformat() if location.created_at else None,
-            "updated_at": location.updated_at.isoformat() if location.updated_at else None
-        }
+            "updated_at": location.updated_at.isoformat() if location.updated_at else None,
+        },
     }
 
 
@@ -185,33 +187,28 @@ def location_to_geojson(location: Location) -> Dict[str, Any]:
 # CRUD ENDPOINTS
 # ============================================================================
 
+
 @router.post("", response_model=LocationResponse, status_code=status.HTTP_201_CREATED)
 async def create_location(
     data: LocationCreateRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ) -> LocationResponse:
     """
     Create new location with geometry.
-    
+
     Args:
         data: Location data
         db: Database session
         current_user: Authenticated user
-        
+
     Returns:
         LocationResponse: Created location
     """
-    logger.info(
-        "Creating location",
-        extra={
-            "name": data.name,
-            "user_id": str(current_user["id"])
-        }
-    )
-    
+    logger.info("Creating location", extra={"name": data.name, "user_id": str(current_user["id"])})
+
     location_repo = LocationRepository(db)
-    
+
     # Create location with spatial data
     location = await location_repo.create(
         name=data.name,
@@ -224,11 +221,11 @@ async def create_location(
         city=data.city,
         location_type=data.location_type,
         metadata=data.metadata or {},
-        user_id=UUID(current_user["id"])
+        user_id=UUID(current_user["id"]),
     )
-    
+
     logger.info("Location created", extra={"location_id": str(location.id)})
-    
+
     return LocationResponse(
         id=location.id,
         name=location.name,
@@ -240,40 +237,34 @@ async def create_location(
         region=location.region,
         city=location.city,
         location_type=location.location_type,
-        geometry={
-            "type": "Point",
-            "coordinates": [location.longitude, location.latitude]
-        },
+        geometry={"type": "Point", "coordinates": [location.longitude, location.latitude]},
         metadata=location.metadata or {},
         created_at=location.created_at.isoformat() if location.created_at else "",
-        updated_at=location.updated_at.isoformat() if location.updated_at else ""
+        updated_at=location.updated_at.isoformat() if location.updated_at else "",
     )
 
 
 @router.get("/{location_id}", response_model=LocationResponse)
-async def get_location(
-    location_id: UUID,
-    db: AsyncSession = Depends(get_db)
-) -> LocationResponse:
+async def get_location(location_id: UUID, db: AsyncSession = Depends(get_db)) -> LocationResponse:
     """
     Get location by ID.
-    
+
     Args:
         location_id: Location ID
         db: Database session
-        
+
     Returns:
         LocationResponse: Location details
-        
+
     Raises:
         RecordNotFoundError: If location not found
     """
     location_repo = LocationRepository(db)
     location = await location_repo.get_by_id(location_id)
-    
+
     if not location:
         raise RecordNotFoundError("Location", str(location_id))
-    
+
     return LocationResponse(
         id=location.id,
         name=location.name,
@@ -285,13 +276,10 @@ async def get_location(
         region=location.region,
         city=location.city,
         location_type=location.location_type,
-        geometry={
-            "type": "Point",
-            "coordinates": [location.longitude, location.latitude]
-        },
+        geometry={"type": "Point", "coordinates": [location.longitude, location.latitude]},
         metadata=location.metadata or {},
         created_at=location.created_at.isoformat() if location.created_at else "",
-        updated_at=location.updated_at.isoformat() if location.updated_at else ""
+        updated_at=location.updated_at.isoformat() if location.updated_at else "",
     )
 
 
@@ -301,23 +289,23 @@ async def list_locations(
     offset: int = Query(default=0, ge=0, description="Results to skip"),
     country: str | None = Query(default=None, description="Filter by country"),
     location_type: str | None = Query(default=None, description="Filter by type"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> List[LocationResponse]:
     """
     List locations with pagination and filters.
-    
+
     Args:
         limit: Maximum results
         offset: Results to skip
         country: Filter by country
         location_type: Filter by location type
         db: Database session
-        
+
     Returns:
         list: List of locations
     """
     location_repo = LocationRepository(db)
-    
+
     # Build filters
     filters = {}
     if country:
@@ -326,7 +314,7 @@ async def list_locations(
         locations = await location_repo.get_by_type(location_type, limit=limit)
     else:
         locations = await location_repo.get_all(limit=limit, offset=offset)
-    
+
     return [
         LocationResponse(
             id=loc.id,
@@ -339,13 +327,10 @@ async def list_locations(
             region=loc.region,
             city=loc.city,
             location_type=loc.location_type,
-            geometry={
-                "type": "Point",
-                "coordinates": [loc.longitude, loc.latitude]
-            },
+            geometry={"type": "Point", "coordinates": [loc.longitude, loc.latitude]},
             metadata=loc.metadata or {},
             created_at=loc.created_at.isoformat() if loc.created_at else "",
-            updated_at=loc.updated_at.isoformat() if loc.updated_at else ""
+            updated_at=loc.updated_at.isoformat() if loc.updated_at else "",
         )
         for loc in locations
     ]
@@ -356,45 +341,42 @@ async def update_location(
     location_id: UUID,
     data: LocationUpdateRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ) -> LocationResponse:
     """
     Update location.
-    
+
     Args:
         location_id: Location ID
         data: Update data
         db: Database session
         current_user: Authenticated user
-        
+
     Returns:
         LocationResponse: Updated location
-        
+
     Raises:
         RecordNotFoundError: If location not found
     """
     location_repo = LocationRepository(db)
-    
+
     # Prepare update data
-    update_data = {
-        k: v for k, v in data.dict(exclude_unset=True).items()
-        if v is not None
-    }
-    
+    update_data = {k: v for k, v in data.dict(exclude_unset=True).items() if v is not None}
+
     if not update_data:
         raise ValidationError(
             message="No fields to update",
-            details={"provided_fields": list(data.dict(exclude_unset=True).keys())}
+            details={"provided_fields": list(data.dict(exclude_unset=True).keys())},
         )
-    
+
     # Update location
     location = await location_repo.update(location_id, **update_data)
-    
+
     if not location:
         raise RecordNotFoundError("Location", str(location_id))
-    
+
     logger.info("Location updated", extra={"location_id": str(location.id)})
-    
+
     return LocationResponse(
         id=location.id,
         name=location.name,
@@ -406,13 +388,10 @@ async def update_location(
         region=location.region,
         city=location.city,
         location_type=location.location_type,
-        geometry={
-            "type": "Point",
-            "coordinates": [location.longitude, location.latitude]
-        },
+        geometry={"type": "Point", "coordinates": [location.longitude, location.latitude]},
         metadata=location.metadata or {},
         created_at=location.created_at.isoformat() if location.created_at else "",
-        updated_at=location.updated_at.isoformat() if location.updated_at else ""
+        updated_at=location.updated_at.isoformat() if location.updated_at else "",
     )
 
 
@@ -420,25 +399,25 @@ async def update_location(
 async def delete_location(
     location_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ) -> None:
     """
     Delete location (soft delete).
-    
+
     Args:
         location_id: Location ID
         db: Database session
         current_user: Authenticated user
-        
+
     Raises:
         RecordNotFoundError: If location not found
     """
     location_repo = LocationRepository(db)
     success = await location_repo.delete(location_id, soft=True)
-    
+
     if not success:
         raise RecordNotFoundError("Location", str(location_id))
-    
+
     logger.info("Location deleted", extra={"location_id": str(location_id)})
 
 
@@ -446,68 +425,68 @@ async def delete_location(
 # SPATIAL QUERY ENDPOINTS
 # ============================================================================
 
+
 @router.post("/nearby", response_model=List[LocationWithDistance])
 async def find_nearby_locations(
-    search: NearbySearchRequest,
-    db: AsyncSession = Depends(get_db)
+    search: NearbySearchRequest, db: AsyncSession = Depends(get_db)
 ) -> List[LocationWithDistance]:
     """
     Find locations within radius using PostGIS spatial query.
-    
+
     Args:
         search: Nearby search parameters
         db: Database session
-        
+
     Returns:
         list: Locations with distance information
-        
+
     Performance: O(log n) with spatial index
     """
     logger.info(
         "Nearby location search",
-        extra={
-            "center": f"({search.latitude}, {search.longitude})",
-            "radius_km": search.radius_km
-        }
+        extra={"center": f"({search.latitude}, {search.longitude})", "radius_km": search.radius_km},
     )
-    
+
     try:
         # Create center point (SRID 4326 = WGS84)
-        center_point = func.ST_SetSRID(
-            func.ST_MakePoint(search.longitude, search.latitude),
-            4326
-        )
-        
+        center_point = func.ST_SetSRID(func.ST_MakePoint(search.longitude, search.latitude), 4326)
+
         # Build query with ST_DWithin for efficiency
         # Convert km to meters and use geography type for accurate earth-surface distance
         radius_meters = search.radius_km * 1000
-        
-        query = select(
-            Location,
-            func.ST_Distance(
-                func.ST_Transform(Location.geometry, 4326).cast(Geography(geometry_type='POINT')),
-                center_point.cast(Geography(geometry_type='POINT'))
-            ).label('distance_meters')
-        ).where(
-            Location.is_deleted == False
-        ).where(
-            func.ST_DWithin(
-                func.ST_Transform(Location.geometry, 4326).cast(Geography(geometry_type='POINT')),
-                center_point.cast(Geography(geometry_type='POINT')),
-                radius_meters
+
+        query = (
+            select(
+                Location,
+                func.ST_Distance(
+                    func.ST_Transform(Location.geometry, 4326).cast(
+                        Geography(geometry_type="POINT")
+                    ),
+                    center_point.cast(Geography(geometry_type="POINT")),
+                ).label("distance_meters"),
+            )
+            .where(Location.is_deleted == False)
+            .where(
+                func.ST_DWithin(
+                    func.ST_Transform(Location.geometry, 4326).cast(
+                        Geography(geometry_type="POINT")
+                    ),
+                    center_point.cast(Geography(geometry_type="POINT")),
+                    radius_meters,
+                )
             )
         )
-        
+
         # Add location type filter if provided
         if search.location_type:
             query = query.where(Location.location_type == search.location_type)
-        
+
         # Order by distance and limit
-        query = query.order_by(text('distance_meters')).limit(search.limit)
-        
+        query = query.order_by(text("distance_meters")).limit(search.limit)
+
         result = await db.execute(query)
         rows = result.all()
-        
+
         # Convert to response format
         locations_with_distance = [
             LocationWithDistance(
@@ -523,27 +502,21 @@ async def find_nearby_locations(
                 location_type=row.Location.location_type,
                 geometry={
                     "type": "Point",
-                    "coordinates": [row.Location.longitude, row.Location.latitude]
+                    "coordinates": [row.Location.longitude, row.Location.latitude],
                 },
                 distance_km=round(row.distance_meters / 1000, 2),
-                metadata=row.Location.metadata or {}
+                metadata=row.Location.metadata or {},
             )
             for row in rows
         ]
-        
-        logger.info(
-            "Found nearby locations",
-            extra={"count": len(locations_with_distance)}
-        )
-        
+
+        logger.info("Found nearby locations", extra={"count": len(locations_with_distance)})
+
         return locations_with_distance
-    
+
     except Exception as e:
         logger.error("Nearby search failed", error=e)
-        raise DatabaseError(
-            message="Failed to execute spatial query",
-            details={"error": str(e)}
-        )
+        raise DatabaseError(message="Failed to execute spatial query", details={"error": str(e)})
 
 
 @router.get("/geojson", response_model=Dict[str, Any])
@@ -552,23 +525,23 @@ async def get_locations_geojson(
     offset: int = Query(default=0, ge=0),
     country: str | None = Query(default=None),
     location_type: str | None = Query(default=None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
     Get locations as GeoJSON FeatureCollection.
-    
+
     Args:
         limit: Maximum results
         offset: Results to skip
         country: Filter by country
         location_type: Filter by location type
         db: Database session
-        
+
     Returns:
         dict: GeoJSON FeatureCollection
     """
     location_repo = LocationRepository(db)
-    
+
     # Get locations
     if country:
         locations = await location_repo.get_by_country(country, limit=limit)
@@ -576,18 +549,14 @@ async def get_locations_geojson(
         locations = await location_repo.get_by_type(location_type, limit=limit)
     else:
         locations = await location_repo.get_all(limit=limit, offset=offset)
-    
+
     # Build GeoJSON FeatureCollection
     features = [location_to_geojson(loc) for loc in locations]
-    
+
     return {
         "type": "FeatureCollection",
         "features": features,
-        "metadata": {
-            "count": len(features),
-            "limit": limit,
-            "offset": offset
-        }
+        "metadata": {"count": len(features), "limit": limit, "offset": offset},
     }
 
 
@@ -595,35 +564,33 @@ async def get_locations_geojson(
 # BULK OPERATIONS
 # ============================================================================
 
+
 @router.post("/bulk", response_model=BulkCreateResponse, status_code=status.HTTP_201_CREATED)
 async def bulk_create_locations(
     data: BulkCreateRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user),
 ) -> BulkCreateResponse:
     """
     Create multiple locations in bulk.
-    
+
     Args:
         data: Bulk creation request
         db: Database session
         current_user: Authenticated user
-        
+
     Returns:
         BulkCreateResponse: Created locations
-        
+
     Performance: O(n) with batch insert
     """
     logger.info(
         "Bulk location creation",
-        extra={
-            "count": len(data.locations),
-            "user_id": str(current_user["id"])
-        }
+        extra={"count": len(data.locations), "user_id": str(current_user["id"])},
     )
-    
+
     location_repo = LocationRepository(db)
-    
+
     # Prepare location data
     locations_data = [
         {
@@ -637,19 +604,16 @@ async def bulk_create_locations(
             "city": loc.city,
             "location_type": loc.location_type,
             "metadata": loc.metadata or {},
-            "user_id": UUID(current_user["id"])
+            "user_id": UUID(current_user["id"]),
         }
         for loc in data.locations
     ]
-    
+
     # Bulk create
     created_locations = await location_repo.bulk_create(locations_data)
-    
-    logger.info(
-        "Bulk creation completed",
-        extra={"created_count": len(created_locations)}
-    )
-    
+
+    logger.info("Bulk creation completed", extra={"created_count": len(created_locations)})
+
     # Convert to response
     location_responses = [
         LocationResponse(
@@ -663,21 +627,15 @@ async def bulk_create_locations(
             region=loc.region,
             city=loc.city,
             location_type=loc.location_type,
-            geometry={
-                "type": "Point",
-                "coordinates": [loc.longitude, loc.latitude]
-            },
+            geometry={"type": "Point", "coordinates": [loc.longitude, loc.latitude]},
             metadata=loc.metadata or {},
             created_at=loc.created_at.isoformat() if loc.created_at else "",
-            updated_at=loc.updated_at.isoformat() if loc.updated_at else ""
+            updated_at=loc.updated_at.isoformat() if loc.updated_at else "",
         )
         for loc in created_locations
     ]
-    
-    return BulkCreateResponse(
-        created_count=len(created_locations),
-        locations=location_responses
-    )
+
+    return BulkCreateResponse(created_count=len(created_locations), locations=location_responses)
 
 
 # Note: For production, add Geography import
@@ -685,7 +643,7 @@ try:
     from geoalchemy2 import Geography
 except ImportError:
     # Fallback if geoalchemy2 not fully installed
-    Geography = lambda **kwargs: text('geography')
+    Geography = lambda **kwargs: text("geography")
 
 
 # Export router

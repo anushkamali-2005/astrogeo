@@ -11,71 +11,66 @@ Author: Production Team
 Version: 1.0.0
 """
 
-from typing import Optional, List, Dict, Any, Generic, TypeVar
 from datetime import datetime
+from typing import Any, Dict, Generic, List, Optional, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel
 
-
 # ============================================================================
 # GENERIC RESPONSE WRAPPERS
 # ============================================================================
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class SuccessResponse(GenericModel, Generic[T]):
     """Generic success response wrapper."""
-    
+
     success: bool = Field(True, description="Success status")
     data: T = Field(..., description="Response data")
     message: Optional[str] = Field(None, description="Optional message")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    
+
     class Config:
         schema_extra = {
             "example": {
                 "success": True,
                 "data": {"id": "123", "name": "Example"},
                 "message": "Operation completed successfully",
-                "timestamp": "2024-01-01T12:00:00Z"
+                "timestamp": "2024-01-01T12:00:00Z",
             }
         }
 
 
 class ErrorResponse(BaseModel):
     """Error response."""
-    
+
     success: bool = Field(False, description="Success status")
     error: Dict[str, Any] = Field(..., description="Error details")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    
+
     class Config:
         schema_extra = {
             "example": {
                 "success": False,
-                "error": {
-                    "code": "ERR_001",
-                    "message": "Operation failed",
-                    "details": {}
-                },
-                "timestamp": "2024-01-01T12:00:00Z"
+                "error": {"code": "ERR_001", "message": "Operation failed", "details": {}},
+                "timestamp": "2024-01-01T12:00:00Z",
             }
         }
 
 
 class PaginatedResponse(GenericModel, Generic[T]):
     """Paginated response wrapper."""
-    
+
     success: bool = Field(True)
     data: List[T] = Field(..., description="List of items")
     total: int = Field(..., description="Total number of items")
     limit: int = Field(..., description="Items per page")
     offset: int = Field(..., description="Current offset")
     has_more: bool = Field(..., description="More items available")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -84,7 +79,7 @@ class PaginatedResponse(GenericModel, Generic[T]):
                 "total": 100,
                 "limit": 10,
                 "offset": 0,
-                "has_more": True
+                "has_more": True,
             }
         }
 
@@ -93,9 +88,10 @@ class PaginatedResponse(GenericModel, Generic[T]):
 # USER RESPONSES
 # ============================================================================
 
+
 class UserResponse(BaseModel):
     """User profile response."""
-    
+
     id: UUID
     email: str
     username: str
@@ -106,7 +102,7 @@ class UserResponse(BaseModel):
     is_verified: bool
     created_at: datetime
     last_login: Optional[datetime]
-    
+
     class Config:
         orm_mode = True
         schema_extra = {
@@ -120,20 +116,20 @@ class UserResponse(BaseModel):
                 "is_active": True,
                 "is_verified": True,
                 "created_at": "2024-01-01T12:00:00Z",
-                "last_login": "2024-01-15T08:30:00Z"
+                "last_login": "2024-01-15T08:30:00Z",
             }
         }
 
 
 class TokenResponse(BaseModel):
     """Authentication token response."""
-    
+
     access_token: str = Field(..., description="JWT access token")
     refresh_token: str = Field(..., description="JWT refresh token")
     token_type: str = Field("bearer", description="Token type")
     expires_in: int = Field(..., description="Token expiration in seconds")
     user: UserResponse = Field(..., description="User information")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -144,8 +140,8 @@ class TokenResponse(BaseModel):
                 "user": {
                     "id": "550e8400-e29b-41d4-a716-446655440000",
                     "email": "user@example.com",
-                    "username": "john_doe"
-                }
+                    "username": "john_doe",
+                },
             }
         }
 
@@ -154,9 +150,10 @@ class TokenResponse(BaseModel):
 # LOCATION RESPONSES
 # ============================================================================
 
+
 class LocationResponse(BaseModel):
     """Location response."""
-    
+
     id: UUID
     name: str
     description: Optional[str]
@@ -171,7 +168,7 @@ class LocationResponse(BaseModel):
     postal_code: Optional[str]
     metadata: Dict[str, Any]
     created_at: datetime
-    
+
     class Config:
         orm_mode = True
         schema_extra = {
@@ -189,17 +186,17 @@ class LocationResponse(BaseModel):
                 "country": "US",
                 "postal_code": "10024",
                 "metadata": {"established": 1857},
-                "created_at": "2024-01-01T12:00:00Z"
+                "created_at": "2024-01-01T12:00:00Z",
             }
         }
 
 
 class LocationDistanceResponse(BaseModel):
     """Location with distance."""
-    
+
     location: LocationResponse
     distance_km: float = Field(..., description="Distance in kilometers")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -207,9 +204,9 @@ class LocationDistanceResponse(BaseModel):
                     "id": "550e8400-e29b-41d4-a716-446655440000",
                     "name": "Central Park",
                     "latitude": 40.785091,
-                    "longitude": -73.968285
+                    "longitude": -73.968285,
                 },
-                "distance_km": 5.2
+                "distance_km": 5.2,
             }
         }
 
@@ -218,26 +215,23 @@ class LocationDistanceResponse(BaseModel):
 # PREDICTION RESPONSES
 # ============================================================================
 
+
 class PredictionResponse(BaseModel):
     """Single prediction response."""
-    
+
     id: UUID
     model_id: UUID
     model_name: str
     model_version: str
     prediction: Any = Field(..., description="Prediction value")
-    probabilities: Optional[Dict[str, float]] = Field(
-        None,
-        description="Class probabilities"
-    )
+    probabilities: Optional[Dict[str, float]] = Field(None, description="Class probabilities")
     confidence: Optional[float] = Field(None, description="Confidence score")
     feature_importance: Optional[Dict[str, float]] = Field(
-        None,
-        description="Feature importance scores"
+        None, description="Feature importance scores"
     )
     execution_time_ms: float = Field(..., description="Execution time in milliseconds")
     timestamp: datetime
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -246,45 +240,37 @@ class PredictionResponse(BaseModel):
                 "model_name": "geo_classifier_v1",
                 "model_version": "1.0.0",
                 "prediction": "urban",
-                "probabilities": {
-                    "urban": 0.85,
-                    "suburban": 0.12,
-                    "rural": 0.03
-                },
+                "probabilities": {"urban": 0.85, "suburban": 0.12, "rural": 0.03},
                 "confidence": 0.85,
-                "feature_importance": {
-                    "population": 0.45,
-                    "area": 0.30,
-                    "density": 0.25
-                },
+                "feature_importance": {"population": 0.45, "area": 0.30, "density": 0.25},
                 "execution_time_ms": 23.5,
-                "timestamp": "2024-01-01T12:00:00Z"
+                "timestamp": "2024-01-01T12:00:00Z",
             }
         }
 
 
 class BatchPredictionResponse(BaseModel):
     """Batch prediction response."""
-    
+
     predictions: List[Dict[str, Any]] = Field(..., description="List of predictions")
     total_count: int = Field(..., description="Total predictions made")
     successful_count: int = Field(..., description="Successful predictions")
     failed_count: int = Field(..., description="Failed predictions")
     avg_execution_time_ms: float = Field(..., description="Average execution time")
     total_execution_time_ms: float = Field(..., description="Total execution time")
-    
+
     class Config:
         schema_extra = {
             "example": {
                 "predictions": [
                     {"prediction": "urban", "confidence": 0.85},
-                    {"prediction": "suburban", "confidence": 0.72}
+                    {"prediction": "suburban", "confidence": 0.72},
                 ],
                 "total_count": 2,
                 "successful_count": 2,
                 "failed_count": 0,
                 "avg_execution_time_ms": 15.3,
-                "total_execution_time_ms": 30.6
+                "total_execution_time_ms": 30.6,
             }
         }
 
@@ -293,9 +279,10 @@ class BatchPredictionResponse(BaseModel):
 # MODEL RESPONSES
 # ============================================================================
 
+
 class MLModelResponse(BaseModel):
     """ML model response."""
-    
+
     id: UUID
     name: str
     version: str
@@ -307,7 +294,7 @@ class MLModelResponse(BaseModel):
     mlflow_run_id: Optional[str]
     created_at: datetime
     deployed_at: Optional[datetime]
-    
+
     class Config:
         orm_mode = True
         schema_extra = {
@@ -318,33 +305,25 @@ class MLModelResponse(BaseModel):
                 "model_type": "classification",
                 "framework": "scikit-learn",
                 "status": "production",
-                "metrics": {
-                    "accuracy": 0.92,
-                    "precision": 0.89,
-                    "recall": 0.91,
-                    "f1_score": 0.90
-                },
-                "parameters": {
-                    "n_estimators": 100,
-                    "max_depth": 10
-                },
+                "metrics": {"accuracy": 0.92, "precision": 0.89, "recall": 0.91, "f1_score": 0.90},
+                "parameters": {"n_estimators": 100, "max_depth": 10},
                 "mlflow_run_id": "abc123xyz",
                 "created_at": "2024-01-01T12:00:00Z",
-                "deployed_at": "2024-01-05T10:00:00Z"
+                "deployed_at": "2024-01-05T10:00:00Z",
             }
         }
 
 
 class ModelTrainingResponse(BaseModel):
     """Model training response."""
-    
+
     job_id: UUID = Field(..., description="Training job ID")
     model_name: str
     status: str = Field(..., description="Training status (pending/running/completed/failed)")
     started_at: datetime
     estimated_completion: Optional[datetime] = None
     progress_percent: Optional[float] = Field(None, ge=0, le=100)
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -353,7 +332,7 @@ class ModelTrainingResponse(BaseModel):
                 "status": "running",
                 "started_at": "2024-01-01T12:00:00Z",
                 "estimated_completion": "2024-01-01T12:15:00Z",
-                "progress_percent": 45.0
+                "progress_percent": 45.0,
             }
         }
 
@@ -362,9 +341,10 @@ class ModelTrainingResponse(BaseModel):
 # AGENT RESPONSES
 # ============================================================================
 
+
 class AgentExecutionResponse(BaseModel):
     """Agent execution response."""
-    
+
     id: UUID
     agent_name: str
     task: str
@@ -376,7 +356,7 @@ class AgentExecutionResponse(BaseModel):
     cost_usd: Optional[float]
     created_at: datetime
     completed_at: Optional[datetime]
-    
+
     class Config:
         orm_mode = True
         schema_extra = {
@@ -385,16 +365,13 @@ class AgentExecutionResponse(BaseModel):
                 "agent_name": "ml_agent",
                 "task": "Train classification model",
                 "status": "completed",
-                "result": {
-                    "model_id": "abc123",
-                    "accuracy": 0.92
-                },
+                "result": {"model_id": "abc123", "accuracy": 0.92},
                 "error_message": None,
                 "execution_time_ms": 5432.1,
                 "tokens_used": 1250,
                 "cost_usd": 0.025,
                 "created_at": "2024-01-01T12:00:00Z",
-                "completed_at": "2024-01-01T12:05:32Z"
+                "completed_at": "2024-01-01T12:05:32Z",
             }
         }
 
@@ -403,9 +380,10 @@ class AgentExecutionResponse(BaseModel):
 # HEALTH CHECK RESPONSES
 # ============================================================================
 
+
 class ComponentHealth(BaseModel):
     """Individual component health."""
-    
+
     status: str = Field(..., description="Component status (healthy/unhealthy/degraded)")
     response_time_ms: Optional[float] = None
     details: Optional[Dict[str, Any]] = None
@@ -413,13 +391,13 @@ class ComponentHealth(BaseModel):
 
 class HealthResponse(BaseModel):
     """Basic health response."""
-    
+
     status: str = Field(..., description="Health status (healthy/unhealthy/degraded)")
     service: str = Field(..., description="Service name")
     version: str = Field(..., description="Service version")
     environment: str = Field(..., description="Environment name")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -427,21 +405,21 @@ class HealthResponse(BaseModel):
                 "service": "AstroGeo AI MLOps",
                 "version": "1.0.0",
                 "environment": "production",
-                "timestamp": "2024-01-01T12:00:00Z"
+                "timestamp": "2024-01-01T12:00:00Z",
             }
         }
 
 
 class DetailedHealthResponse(BaseModel):
     """Detailed health response with components."""
-    
+
     status: str = Field(..., description="Overall health status")
     service: str = Field(..., description="Service name")
     version: str = Field(..., description="Service version")
     environment: str = Field(..., description="Environment name")
     components: Dict[str, Any] = Field(..., description="Component health details")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -449,25 +427,22 @@ class DetailedHealthResponse(BaseModel):
                 "service": "AstroGeo AI MLOps",
                 "version": "1.0.0",
                 "environment": "production",
-                "components": {
-                    "database": {"status": "healthy"},
-                    "redis": {"status": "healthy"}
-                },
-                "timestamp": "2024-01-01T12:00:00Z"
+                "components": {"database": {"status": "healthy"}, "redis": {"status": "healthy"}},
+                "timestamp": "2024-01-01T12:00:00Z",
             }
         }
 
 
 class HealthCheckResponse(BaseModel):
     """Detailed health check response."""
-    
+
     status: str = Field(..., description="Overall status")
     timestamp: datetime
     service: str
     version: str
     environment: str
     components: Dict[str, ComponentHealth] = Field(..., description="Component health statuses")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -480,17 +455,11 @@ class HealthCheckResponse(BaseModel):
                     "database": {
                         "status": "healthy",
                         "response_time_ms": 5.2,
-                        "details": {"connections": 10}
+                        "details": {"connections": 10},
                     },
-                    "cache": {
-                        "status": "healthy",
-                        "response_time_ms": 1.1
-                    },
-                    "mlflow": {
-                        "status": "healthy",
-                        "response_time_ms": 23.4
-                    }
-                }
+                    "cache": {"status": "healthy", "response_time_ms": 1.1},
+                    "mlflow": {"status": "healthy", "response_time_ms": 23.4},
+                },
             }
         }
 
@@ -499,9 +468,10 @@ class HealthCheckResponse(BaseModel):
 # STATISTICS RESPONSES
 # ============================================================================
 
+
 class SystemStatsResponse(BaseModel):
     """System statistics response."""
-    
+
     total_users: int
     total_predictions: int
     total_models: int
@@ -510,7 +480,7 @@ class SystemStatsResponse(BaseModel):
     uptime_seconds: float
     cpu_usage_percent: float
     memory_usage_percent: float
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -521,7 +491,7 @@ class SystemStatsResponse(BaseModel):
                 "active_agents": 3,
                 "uptime_seconds": 864000,
                 "cpu_usage_percent": 45.2,
-                "memory_usage_percent": 62.8
+                "memory_usage_percent": 62.8,
             }
         }
 
@@ -544,5 +514,5 @@ __all__ = [
     "HealthResponse",
     "DetailedHealthResponse",
     "HealthCheckResponse",
-    "SystemStatsResponse"
+    "SystemStatsResponse",
 ]

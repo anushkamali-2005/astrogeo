@@ -7,8 +7,7 @@ Author: Production Team
 Version: 1.0.0
 """
 
-from typing import Dict, Any
-
+from typing import Any, Dict
 
 # ============================================================================
 # API METADATA
@@ -47,34 +46,13 @@ Authorization: Bearer <access_token>
 """
 
 API_TAGS_METADATA = [
-    {
-        "name": "Authentication",
-        "description": "User registration, login, and token management"
-    },
-    {
-        "name": "Locations",
-        "description": "Geospatial location management with PostGIS"
-    },
-    {
-        "name": "Predictions",
-        "description": "ML model predictions and batch processing"
-    },
-    {
-        "name": "Agents",
-        "description": "AI agent execution and orchestration"
-    },
-    {
-        "name": "Models",
-        "description": "ML model training, evaluation, and deployment"
-    },
-    {
-        "name": "Admin",
-        "description": "Administrative operations (admin only)"
-    },
-    {
-        "name": "Health",
-        "description": "System health and monitoring endpoints"
-    }
+    {"name": "Authentication", "description": "User registration, login, and token management"},
+    {"name": "Locations", "description": "Geospatial location management with PostGIS"},
+    {"name": "Predictions", "description": "ML model predictions and batch processing"},
+    {"name": "Agents", "description": "AI agent execution and orchestration"},
+    {"name": "Models", "description": "ML model training, evaluation, and deployment"},
+    {"name": "Admin", "description": "Administrative operations (admin only)"},
+    {"name": "Health", "description": "System health and monitoring endpoints"},
 ]
 
 
@@ -88,7 +66,7 @@ EXAMPLES = {
             "email": "user@example.com",
             "username": "johndoe",
             "password": "SecurePass123!",
-            "full_name": "John Doe"
+            "full_name": "John Doe",
         },
         "response": {
             "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -96,19 +74,16 @@ EXAMPLES = {
             "username": "johndoe",
             "full_name": "John Doe",
             "is_active": True,
-            "created_at": "2024-01-01T00:00:00Z"
-        }
+            "created_at": "2024-01-01T00:00:00Z",
+        },
     },
     "login": {
-        "request": {
-            "email": "user@example.com",
-            "password": "SecurePass123!"
-        },
+        "request": {"email": "user@example.com", "password": "SecurePass123!"},
         "response": {
             "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
             "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-            "token_type": "bearer"
-        }
+            "token_type": "bearer",
+        },
     },
     "location_create": {
         "request": {
@@ -117,43 +92,34 @@ EXAMPLES = {
             "latitude": 34.0522,
             "longitude": -118.2437,
             "elevation": 100.5,
-            "location_type": "observatory"
+            "location_type": "observatory",
         },
         "response": {
             "id": "660e8400-e29b-41d4-a716-446655440001",
             "name": "Observatory Site",
             "latitude": 34.0522,
             "longitude": -118.2437,
-            "geometry": {
-                "type": "Point",
-                "coordinates": [-118.2437, 34.0522]
-            },
-            "created_at": "2024-01-01T00:00:00Z"
-        }
+            "geometry": {"type": "Point", "coordinates": [-118.2437, 34.0522]},
+            "created_at": "2024-01-01T00:00:00Z",
+        },
     },
     "prediction": {
         "request": {
             "model_id": "550e8400-e29b-41d4-a716-446655440002",
-            "input_data": {
-                "feature_1": 10.5,
-                "feature_2": 25.3,
-                "feature_3": "category_a"
-            }
+            "input_data": {"feature_1": 10.5, "feature_2": 25.3, "feature_3": "category_a"},
         },
         "response": {
             "prediction": 0.85,
             "confidence": 0.92,
             "model_version": "1.2.0",
-            "prediction_time_ms": 15
-        }
+            "prediction_time_ms": 15,
+        },
     },
     "agent_execution": {
         "request": {
             "agent_type": "astro",
             "task": "Calculate the distance to Mars tonight",
-            "parameters": {
-                "observer_location": "New York"
-            }
+            "parameters": {"observer_location": "New York"},
         },
         "response": {
             "execution_id": "770e8400-e29b-41d4-a716-446655440003",
@@ -161,11 +127,11 @@ EXAMPLES = {
             "result": {
                 "distance_au": 1.52,
                 "distance_km": 227400000,
-                "calculation_time": "2024-01-01T00:00:00Z"
+                "calculation_time": "2024-01-01T00:00:00Z",
             },
-            "duration_seconds": 2.5
-        }
-    }
+            "duration_seconds": 2.5,
+        },
+    },
 }
 
 
@@ -182,40 +148,31 @@ ERROR_RESPONSES = {
                     "error": {
                         "code": "VALIDATION_ERROR",
                         "message": "Invalid input data",
-                        "details": {
-                            "field": "email",
-                            "issue": "Invalid email format"
-                        }
+                        "details": {"field": "email", "issue": "Invalid email format"},
                     }
                 }
             }
-        }
+        },
     },
     401: {
         "description": "Unauthorized",
         "content": {
             "application/json": {
                 "example": {
-                    "error": {
-                        "code": "AUTHENTICATION_ERROR",
-                        "message": "Invalid or expired token"
-                    }
+                    "error": {"code": "AUTHENTICATION_ERROR", "message": "Invalid or expired token"}
                 }
             }
-        }
+        },
     },
     403: {
         "description": "Forbidden",
         "content": {
             "application/json": {
                 "example": {
-                    "error": {
-                        "code": "AUTHORIZATION_ERROR",
-                        "message": "Insufficient permissions"
-                    }
+                    "error": {"code": "AUTHORIZATION_ERROR", "message": "Insufficient permissions"}
                 }
             }
-        }
+        },
     },
     404: {
         "description": "Not Found",
@@ -227,12 +184,12 @@ ERROR_RESPONSES = {
                         "message": "Resource not found",
                         "details": {
                             "resource_type": "Location",
-                            "resource_id": "550e8400-e29b-41d4-a716-446655440000"
-                        }
+                            "resource_id": "550e8400-e29b-41d4-a716-446655440000",
+                        },
                     }
                 }
             }
-        }
+        },
     },
     429: {
         "description": "Too Many Requests",
@@ -242,13 +199,11 @@ ERROR_RESPONSES = {
                     "error": {
                         "code": "RATE_LIMIT_EXCEEDED",
                         "message": "Too many requests",
-                        "details": {
-                            "retry_after_seconds": 60
-                        }
+                        "details": {"retry_after_seconds": 60},
                     }
                 }
             }
-        }
+        },
     },
     500: {
         "description": "Internal Server Error",
@@ -257,12 +212,12 @@ ERROR_RESPONSES = {
                 "example": {
                     "error": {
                         "code": "INTERNAL_SERVER_ERROR",
-                        "message": "An unexpected error occurred"
+                        "message": "An unexpected error occurred",
                     }
                 }
             }
-        }
-    }
+        },
+    },
 }
 
 
@@ -273,5 +228,5 @@ __all__ = [
     "API_DESCRIPTION",
     "API_TAGS_METADATA",
     "EXAMPLES",
-    "ERROR_RESPONSES"
+    "ERROR_RESPONSES",
 ]
