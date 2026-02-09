@@ -1,0 +1,448 @@
+# ============================================================================
+# Kubernetes Deployment - Complete Configuration
+# Production-ready EKS deployment with autoscaling and health checks
+# ============================================================================
+
+---
+# ============================================================================
+# NAMESPACE
+# ============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: astrogeo
+  labels:
+    name: astrogeo
+    environment: production
+
+---
+# ============================================================================
+# CONFIG MAP - Application Configuration
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: astrogeo-config
+  namespace: astrogeo
+data:
+  APP_NAME: "AstroGeo AI MLOps"
+  APP_VERSION: "1.0.0"
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  
+  # API Configuration
+  API_V1_PREFIX: "/api/v1"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  API_WORKERS: "4"
+  
+  # Database (non-sensitive)
+  POSTGRES_HOST: "astrogeo-postgres-service"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "astrogeo_db"
+  
+  # Redis
+  REDIS_HOST: "astrogeo-redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  
+  # Logging
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  
+  # CORS
+  CORS_ALLOW_CREDENTIALS: "true"
+  
+  # Rate Limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_PER_MINUTE: "60"
+  RATE_LIMIT_PER_HOUR: "1000"
+
+---
+# ============================================================================
+# SECRETS - Sensitive Configuration
+# ============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: astrogeo-secrets
+  namespace: astrogeo
+type: Opaque
+stringData:
+  # NOTE: Replace these with actual values or use external secrets manager
+  SECRET_KEY: "your-secret-key-here"
+  
+  # Database credentials
+  POSTGRES_USER: "astrogeo_user"
+  POSTGRES_PASSWORD: "your-secure-password"
+  
+  # MLflow
+  MLFLOW_TRACKING_URI: "https://dagshub.com/your-user/astrogeo-ai-mlops.mlflow"
+  DAGSHUB_USERNAME: "your-username"
+  DAGSHUB_TOKEN: "your-token"
+  
+  # OpenAI
+  OPENAI_API_KEY: "your-openai-api-key"
+  
+  # AWS
+  AWS_ACCESS_KEY_ID: "your-aws-access-key"
+  AWS_SECRET_ACCESS_KEY: "your-aws-secret-key"
+  AWS_REGION: "us-east-1"
+  AWS_S3_BUCKET: "your-s3-bucket"
+
+---
+# ============================================================================
+# PERSISTENT VOLUME CLAIM - Data Storage
+# ============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: astrogeo-data-pvc
+  namespace: astrogeo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3  # AWS EBS gp3
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+# ============================================================================
+# DEPLOYMENT - FastAPI Application
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: astrogeo-api
+  namespace: astrogeo
+  labels:
+    app: astrogeo-api
+    version: v1
+spec:
+  replicas: 3  # Start with 3 replicas
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero-downtime deployment
+  selector:
+    matchLabels:
+      app: astrogeo-api
+  template:
+    metadata:
+      labels:
+        app: astrogeo-api
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      # Service account
+      serviceAccountName: astrogeo-api-sa
+      
+      containers:
+      - name: astrogeo-api
+        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/astrogeo-ai:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        
+        # Environment variables from ConfigMap
+        envFrom:
+        - configMapRef:
+            name: astrogeo-config
+        
+        # Environment variables from Secrets
+        env:
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: astrogeo-secrets
+              key: SECRET_KEY
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: astrogeo-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: astrogeo-secrets
+              key: POSTGRES_PASSWORD
+        - name: MLFLOW_TRACKING_URI
+          valueFrom:
+            secretKeyRef:
+              name: astrogeo-secrets
+              key: MLFLOW_TRACKING_URI
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: astrogeo-secrets
+              key: OPENAI_API_KEY
+        
+        # Resource limits and requests
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /api/v1/ping
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Startup probe (for slow-starting apps)
+        startupProbe:
+          httpGet:
+            path: /api/v1/ping
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 12  # 60 seconds max
+        
+        # Volume mounts
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/data
+        - name: models-volume
+          mountPath: /app/models
+        - name: logs-volume
+          mountPath: /app/logs
+      
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: astrogeo-data-pvc
+      - name: models-volume
+        emptyDir: {}
+      - name: logs-volume
+        emptyDir: {}
+
+---
+# ============================================================================
+# SERVICE - Load Balancer
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: astrogeo-service
+  namespace: astrogeo
+  labels:
+    app: astrogeo-api
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app: astrogeo-api
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
+
+---
+# ============================================================================
+# HORIZONTAL POD AUTOSCALER
+# ============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: astrogeo-api-hpa
+  namespace: astrogeo
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: astrogeo-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+      - type: Pods
+        value: 2
+        periodSeconds: 30
+      selectPolicy: Max
+
+---
+# ============================================================================
+# SERVICE ACCOUNT
+# ============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: astrogeo-api-sa
+  namespace: astrogeo
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::${AWS_ACCOUNT_ID}:role/astrogeo-api-role
+
+---
+# ============================================================================
+# POD DISRUPTION BUDGET
+# ============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: astrogeo-api-pdb
+  namespace: astrogeo
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: astrogeo-api
+
+---
+# ============================================================================
+# NETWORK POLICY
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: astrogeo-api-netpol
+  namespace: astrogeo
+spec:
+  podSelector:
+    matchLabels:
+      app: astrogeo-api
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443  # HTTPS for external APIs
+
+---
+# ============================================================================
+# INGRESS (Optional - for HTTPS/domain routing)
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: astrogeo-ingress
+  namespace: astrogeo
+  annotations:
+    kubernetes.io/ingress.class: "alb"
+    alb.ingress.kubernetes.io/scheme: "internet-facing"
+    alb.ingress.kubernetes.io/target-type: "ip"
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:${AWS_REGION}:${AWS_ACCOUNT_ID}:certificate/your-cert-id"
+    alb.ingress.kubernetes.io/ssl-policy: "ELBSecurityPolicy-TLS-1-2-2017-01"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+spec:
+  rules:
+  - host: api.astrogeo.ai
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: astrogeo-service
+            port:
+              number: 80
+
+# ============================================================================
+# DEPLOYMENT INSTRUCTIONS
+# ============================================================================
+#
+# 1. Update variables in secrets (replace ${AWS_ACCOUNT_ID}, ${AWS_REGION})
+#
+# 2. Create namespace:
+#    kubectl apply -f namespace.yaml
+#
+# 3. Create secrets:
+#    kubectl create secret generic astrogeo-secrets \
+#      --from-literal=SECRET_KEY="your-key" \
+#      --from-literal=POSTGRES_PASSWORD="your-password" \
+#      --namespace astrogeo
+#
+# 4. Apply all manifests:
+#    kubectl apply -f .
+#
+# 5. Verify deployment:
+#    kubectl get pods -n astrogeo
+#    kubectl get svc -n astrogeo
+#    kubectl get hpa -n astrogeo
+#
+# 6. Get load balancer URL:
+#    kubectl get svc astrogeo-service -n astrogeo -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+#
+# 7. Test health:
+#    curl http://<load-balancer-url>/api/v1/health
+#
+# ============================================================================

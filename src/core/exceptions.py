@@ -527,6 +527,26 @@ class MLflowError(ExternalServiceError):
         self.error_code = "EXT_002"
 
 
+# ============================================================================
+# SERVICE AVAILABILITY EXCEPTIONS
+# ============================================================================
+
+class ServiceUnavailableError(BaseAPIException):
+    """Critical service unavailable."""
+    
+    def __init__(
+        self,
+        message: str = "Service unavailable",
+        details: Optional[Dict[str, Any]] = None
+    ):
+        super().__init__(
+            message=message,
+            error_code="SVC_001",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            details=details
+        )
+
+
 # Export public API
 __all__ = [
     "BaseAPIException",
@@ -558,5 +578,6 @@ __all__ = [
     "DataValidationError",
     "RateLimitExceededError",
     "ExternalServiceError",
-    "MLflowError"
+    "MLflowError",
+    "ServiceUnavailableError"
 ]

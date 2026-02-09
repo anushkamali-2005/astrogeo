@@ -165,9 +165,28 @@ class StructuredLogger:
         """Log info message."""
         self.logger.info(message, extra=self._format_extra(extra))
     
-    def warning(self, message: str, extra: Optional[Dict[str, Any]] = None) -> None:
-        """Log warning message."""
-        self.logger.warning(message, extra=self._format_extra(extra))
+    def warning(
+        self,
+        message: str,
+        error: Optional[Exception] = None,
+        extra: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Log warning message with optional exception details.
+        
+        Args:
+            message: Warning message
+            error: Exception object
+            extra: Additional context
+        """
+        extra_data = self._format_extra(extra) or {}
+        
+        if error:
+            extra_data["error_type"] = type(error).__name__
+            extra_data["error_message"] = str(error)
+            extra_data["traceback"] = traceback.format_exc()
+        
+        self.logger.warning(message, extra=extra_data, exc_info=error is not None)
     
     def error(
         self,

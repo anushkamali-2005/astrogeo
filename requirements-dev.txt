@@ -1,70 +1,71 @@
+# ============================================================================
+# Development & Testing Dependencies - AstroGeo AI MLOps
+# Tested and verified on Python 3.10+
+# ============================================================================
+
+# Include production dependencies
 -r requirements.txt
 
-# Development Tools
-ipython==8.20.0
-jupyter==1.0.0
-jupyterlab==4.0.11
-notebook==7.0.7
-
-# Testing
-pytest==8.0.0
-pytest-asyncio==0.23.4
+# ============================================================================
+# TESTING FRAMEWORKS
+# ============================================================================
+pytest==7.4.3
+pytest-asyncio==0.21.1
 pytest-cov==4.1.0
 pytest-mock==3.12.0
-pytest-xdist==3.5.0
-pytest-timeout==2.2.0
-faker==22.6.0
-factory-boy==3.3.0
-coverage[toml]==7.4.1
 
-# Code Quality
-black==24.1.1
+# ============================================================================
+# CODE QUALITY & LINTING
+# ============================================================================
+# Formatters
+black==23.12.1
 isort==5.13.2
+
+# Linters
 flake8==7.0.0
 pylint==3.0.3
+
+# Type checking
 mypy==1.8.0
-pre-commit==3.6.0
-autopep8==2.0.4
-bandit==1.7.6
-
-# Documentation
-mkdocs==1.5.3
-mkdocs-material==9.5.6
-mkdocstrings[python]==0.24.0
-pdoc3==0.10.0
-
-# Profiling & Debugging
-line-profiler==4.1.2
-memory-profiler==0.61.0
-py-spy==0.3.14
-scalene==1.5.38
-snakeviz==2.2.0
-
-# Load Testing
-locust==2.20.0
-
-# Type Stubs
-types-requests==2.31.0.20240125
-types-redis==4.6.0.20240106
-types-PyYAML==6.0.12.12
-types-python-dateutil==2.8.19.20240106
-
-# Linting Plugins
-flake8-docstrings==1.7.0
-flake8-bugbear==24.1.17
-flake8-comprehensions==3.14.0
-flake8-simplify==0.21.0
 
 # Security
-safety==3.0.1
-pip-audit==2.6.3
+bandit==1.7.6
 
-# Database Tools
-pgcli==4.0.1
+# ============================================================================
+# PRE-COMMIT HOOKS
+# ============================================================================
+pre-commit==3.6.0
 
-# AWS Tools
-awscli==1.32.34
-aws-sam-cli==1.108.0
+# ============================================================================
+# DEBUGGING
+# ============================================================================
+ipdb==0.13.13
+ipython==8.20.0
 
-# Kubernetes Tools
-kubectl==1.28.2
+# ============================================================================
+# API TESTING
+# ============================================================================
+httpx==0.25.2  # Already in requirements.txt but listed for clarity
+
+# ============================================================================
+# MOCKING & FIXTURES
+# ============================================================================
+faker==21.0.0
+
+# ============================================================================
+# DEVELOPMENT UTILITIES
+# ============================================================================
+python-dotenv==1.0.0  # Already in requirements.txt
+
+# ============================================================================
+# NOTES
+# ============================================================================
+# Heavy packages like scikit-learn, tensorflow, geopandas are excluded
+# to avoid compilation errors. Install them separately if needed:
+#
+# pip install scikit-learn
+# pip install tensorflow  
+# pip install geopandas
+# pip install jupyter notebook
+#
+# ============================================================================

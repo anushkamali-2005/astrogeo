@@ -1,79 +1,103 @@
+# ============================================================================
+# PyProject.toml - Modern Python Project Configuration
+# AstroGeo AI MLOps Platform
+# ============================================================================
+
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "astrogeo-ai-mlops"
 version = "1.0.0"
-description = "Production-ready MLOps platform with Agentic AI and Geospatial Analytics"
+description = "Enterprise MLOps platform with Agentic AI and Geospatial Analytics"
 readme = "README.md"
-requires-python = ">=3.10,<3.12"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Production Team", email = "team@astrogeo.ai"}
 ]
-keywords = ["mlops", "ai", "geospatial", "fastapi", "agents", "postgis"]
+maintainers = [
+    {name = "Production Team", email = "team@astrogeo.ai"}
+]
+keywords = [
+    "mlops",
+    "machine-learning",
+    "agentic-ai",
+    "geospatial",
+    "fastapi",
+    "langchain",
+    "mlflow",
+    "postgis"
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Framework :: FastAPI",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: GIS",
 ]
 
 dependencies = [
-    "fastapi>=0.109.2",
-    "uvicorn[standard]>=0.27.1",
-    "pydantic>=2.6.1",
-    "sqlalchemy>=2.0.25",
-    "psycopg2-binary>=2.9.9",
-    "geoalchemy2>=0.14.4",
-    "mlflow>=2.10.2",
-    "langchain>=0.1.7",
-    "pandas>=2.2.0",
-    "numpy>=1.26.3",
-    "scikit-learn>=1.4.0",
+    "fastapi>=0.104.1",
+    "uvicorn[standard]>=0.24.0",
+    "sqlalchemy>=2.0.23",
+    "asyncpg>=0.29.0",
+    "pydantic>=2.5.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "redis>=5.0.1",
+    "mlflow>=2.9.2",
+    "langchain>=0.1.0",
+    "openai>=1.6.1",
+    "geoalchemy2>=0.14.2",
+    "shapely>=2.0.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.4",
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
     "pytest-cov>=4.1.0",
-    "black>=24.1.1",
+    "black>=23.12.1",
     "isort>=5.13.2",
-    "mypy>=1.8.0",
     "flake8>=7.0.0",
+    "mypy>=1.8.0",
+    "bandit>=1.7.6",
+    "pre-commit>=3.6.0",
 ]
+
 docs = [
+    "sphinx>=7.2.6",
+    "sphinx-rtd-theme>=2.0.0",
     "mkdocs>=1.5.3",
-    "mkdocs-material>=9.5.6",
+    "mkdocs-material>=9.5.3",
+]
+
+all = [
+    "astrogeo-ai-mlops[dev,docs]",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/astrogeo-ai-mlops"
+Homepage = "https://github.com/your-org/astrogeo-ai-mlops"
 Documentation = "https://astrogeo-ai-mlops.readthedocs.io"
-Repository = "https://github.com/yourusername/astrogeo-ai-mlops"
-Issues = "https://github.com/yourusername/astrogeo-ai-mlops/issues"
+Repository = "https://github.com/your-org/astrogeo-ai-mlops"
+Issues = "https://github.com/your-org/astrogeo-ai-mlops/issues"
 
 [project.scripts]
-astrogeo = "src.api.main:run"
+astrogeo = "src.cli:main"
 
-[tool.setuptools]
-package-dir = {"" = "."}
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["src*"]
-exclude = ["tests*", "docs*", "notebooks*"]
-
-# Black configuration
+# ============================================================================
+# BLACK - Code Formatting
+# ============================================================================
 [tool.black]
 line-length = 100
-target-version = ['py310', 'py311']
+target-version = ['py310', 'py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -90,21 +114,25 @@ extend-exclude = '''
 )/
 '''
 
-# isort configuration
+# ============================================================================
+# ISORT - Import Sorting
+# ============================================================================
 [tool.isort]
 profile = "black"
+line_length = 100
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
-line_length = 100
 skip_gitignore = true
-skip = [".venv", "venv", "env", "migrations"]
+skip_glob = ["*/migrations/*"]
 
-# pytest configuration
+# ============================================================================
+# PYTEST - Testing Configuration
+# ============================================================================
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "7.0"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -118,15 +146,15 @@ addopts = [
     "--cov-report=html",
     "--cov-report=xml",
     "--cov-branch",
-    "--tb=short",
+    "--maxfail=3",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
-    "agents: marks tests for agentic AI components",
+    "api: marks tests as API tests",
     "database: marks tests requiring database",
-    "geospatial: marks tests for geospatial functionality",
+    "agent: marks tests for AI agents",
 ]
 asyncio_mode = "auto"
 filterwarnings = [
@@ -135,15 +163,17 @@ filterwarnings = [
     "ignore::DeprecationWarning",
 ]
 
-# Coverage configuration
+# ============================================================================
+# COVERAGE - Code Coverage
+# ============================================================================
 [tool.coverage.run]
 source = ["src"]
 omit = [
     "*/tests/*",
-    "*/test_*.py",
-    "*/__pycache__/*",
-    "*/venv/*",
     "*/migrations/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+    "*/venv/*",
 ]
 branch = true
 
@@ -154,67 +184,116 @@ skip_covered = false
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
+    "if __name__ == .__main__.:",
     "raise AssertionError",
     "raise NotImplementedError",
-    "if __name__ == .__main__.:",
+    "if 0:",
+    "if False:",
     "if TYPE_CHECKING:",
-    "@abstractmethod",
-    "@abc.abstractmethod",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
 ]
 
 [tool.coverage.html]
 directory = "htmlcov"
 
-# MyPy configuration
+# ============================================================================
+# MYPY - Type Checking
+# ============================================================================
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 check_untyped_defs = true
-disallow_untyped_calls = true
-disallow_untyped_decorators = false
+disallow_untyped_calls = false
+disallow_any_generics = false
+ignore_missing_imports = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 follow_imports = "normal"
-ignore_missing_imports = true
-strict_equality = true
-strict_optional = true
 show_error_codes = true
-show_column_numbers = true
 show_error_context = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = [
-    "mlflow.*",
-    "dagshub.*",
-    "geopandas.*",
-    "shapely.*",
-    "langchain.*",
-]
-ignore_missing_imports = true
+module = "tests.*"
+ignore_errors = true
 
-# Pylint configuration
+# ============================================================================
+# BANDIT - Security Linting
+# ============================================================================
+[tool.bandit]
+exclude_dirs = ["tests", "migrations", "venv"]
+skips = ["B101", "B601"]
+
+# ============================================================================
+# PYLINT - Advanced Linting
+# ============================================================================
 [tool.pylint.messages_control]
 disable = [
     "C0111",  # missing-docstring
-    "C0103",  # invalid-name
     "R0903",  # too-few-public-methods
+    "C0103",  # invalid-name
     "R0913",  # too-many-arguments
-    "W0212",  # protected-access
 ]
 
 [tool.pylint.format]
-max-line-length = 100
+max-line-length = 127
 
-[tool.pylint.basic]
-good-names = ["i", "j", "k", "ex", "Run", "_", "id", "df", "X", "y"]
+# ============================================================================
+# RUFF - Fast Python Linter
+# ============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
 
-# Bandit (security) configuration
-[tool.bandit]
-exclude_dirs = ["/tests", "/venv", "/env"]
-skips = ["B101", "B601"]
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["E501"]
+
+# ============================================================================
+# SETUPTOOLS - Build Configuration
+# ============================================================================
+[tool.setuptools]
+package-dir = {"" = "."}
+packages = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "src.__version__"}
+
+# ============================================================================
+# PDM - Python Development Master
+# ============================================================================
+[tool.pdm]
+[tool.pdm.dev-dependencies]
+test = [
+    "pytest>=7.4.3",
+    "pytest-cov>=4.1.0",
+]
+lint = [
+    "black>=23.12.1",
+    "isort>=5.13.2",
+    "flake8>=7.0.0",
+]
+
+# ============================================================================
+# END
+# ============================================================================

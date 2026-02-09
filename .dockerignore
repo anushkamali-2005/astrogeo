@@ -1,60 +1,166 @@
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.Python
+# ============================================================================
+# Docker Ignore File
+# Exclude unnecessary files from Docker build context
+# ============================================================================
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
 *.so
-*.egg
-*.egg-info
-dist
-build
-.git
-.github
-.gitignore
-.dockerignore
-.env
-.env.*
-*.md
-README.md
-LICENSE
-docs/
-tests/
-*.ipynb
-.ipynb_checkpoints
-notebooks/
-mlruns/
-mlartifacts/
-.dvc
-data/raw
-data/processed
-data/features
-data/external
-*.csv
-*.parquet
-.pytest_cache
-.coverage
-htmlcov
-.tox
-.vscode
-.idea
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+virtualenv/
+.conda/
+
+# IDEs
+.vscode/
+.idea/
 *.swp
 *.swo
+*~
 .DS_Store
-Thumbs.db
-venv
-env
-ENV
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+*.cover
+.hypothesis/
+
+# Documentation
+docs/_build/
+site/
+.sphinx/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
 *.log
 logs/
-tmp/
-temp/
-.mypy_cache
-.hypothesis
+*.log.*
+
+# Database
 *.db
 *.sqlite
-k8s/
-scripts/
+*.sqlite3
+
+# Development files
+Makefile
+*.md
+LICENSE
+.gitignore
+.gitattributes
+
+# CI/CD
 .github/
+.gitlab-ci.yml
+.circleci/
+
+# Git
+.git/
+.gitignore
+
+# Data files (use volumes instead)
+data/
+*.csv
+*.json
+*.parquet
+*.pkl
+*.pickle
+
+# Model files (use volumes or S3)
+models/
+*.h5
+*.pt
+*.pth
+*.onnx
+*.pb
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Docker files (don't need in container)
 docker-compose*.yml
 Dockerfile*
-Makefile
+.dockerignore
+
+# Scripts that run outside container
+scripts/local_*
+scripts/dev_*
+
+# Test files (if not needed)
+tests/
+*.test.py
+
+# Coverage reports
+coverage.xml
+.coverage
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Profiling
+*.prof
+*.lprof
+
+# Pre-commit
+.pre-commit-config.yaml
+
+# Node (if any)
+node_modules/
+npm-debug.log
+
+# Kubernetes
+k8s/
+*.yaml
+*.yml
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Large binary files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# ============================================================================
+# KEEP THESE FILES
+# ============================================================================
+# Explicitly include if needed:
+# !important_file.txt
+# ============================================================================

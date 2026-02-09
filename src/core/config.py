@@ -17,14 +17,16 @@ from functools import lru_cache
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    from pydantic import BaseSettings
+    
 from pydantic import (
-    BaseSettings,
     Field,
-    PostgresDsn,
-    validator,
-    AnyHttpUrl
+    field_validator,
+    ConfigDict
 )
-from pydantic.networks import RedisDsn
 
 
 class Settings(BaseSettings):
@@ -95,20 +97,20 @@ class Settings(BaseSettings):
     DB_POOL_RECYCLE: int = Field(default=3600, env="DB_POOL_RECYCLE")
     
     # Database URL (auto-generated)
-    DATABASE_URL: Optional[PostgresDsn] = None
+    DATABASE_URL: Optional[str] = None
     
-    @validator("DATABASE_URL", pre=True)
-    def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> str:
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: Optional[str], info) -> str:
         """Construct PostgreSQL connection URL."""
-        if isinstance(v, str):
+        if isinstance(v, str) and v:
             return v
-        return PostgresDsn.build(
-            scheme="postgresql+asyncpg",
-            user=values.get("POSTGRES_USER"),
-            password=values.get("POSTGRES_PASSWORD"),
-            host=values.get("POSTGRES_HOST"),
-            port=str(values.get("POSTGRES_PORT")),
-            path=f"/{values.get('POSTGRES_DB') or ''}",
+        
+        values = info.data
+        return (
+            f"postgresql+asyncpg://{values.get('POSTGRES_USER')}:"
+            f"{values.get('POSTGRES_PASSWORD')}@{values.get('POSTGRES_HOST')}:"
+            f"{values.get('POSTGRES_PORT')}/{values.get('POSTGRES_DB')}"
         )
     
     # ============================================================================
@@ -118,18 +120,20 @@ class Settings(BaseSettings):
     REDIS_PORT: int = Field(default=6379, env="REDIS_PORT")
     REDIS_DB: int = Field(default=0, env="REDIS_DB")
     REDIS_PASSWORD: Optional[str] = Field(default=None, env="REDIS_PASSWORD")
-    REDIS_URL: Optional[RedisDsn] = None
+    REDIS_URL: Optional[str] = None
     
     # Cache Settings
-    CACHE_TTL: int = Field(default=3600, env="CACHE_TTL")  # 1 hour
-    CACHE_PREFIX: str = Field(default="astrogeo:", env="CACHE_PREFIX")
+    CACHE_TTL: int = Field(default=3600, description="Cache TTL in seconds")  # 1 hour
+    CACHE_PREFIX: str = Field(default="astrogeo:", description="Cache key prefix")
     
-    @validator("REDIS_URL", pre=True)
-    def assemble_redis_connection(cls, v: Optional[str], values: Dict[str, Any]) -> str:
+    @field_validator("REDIS_URL", mode="before")
+    @classmethod
+    def assemble_redis_connection(cls, v: Optional[str], info) -> str:
         """Construct Redis connection URL."""
-        if isinstance(v, str):
+        if isinstance(v, str) and v:
             return v
         
+        values = info.data
         password = values.get("REDIS_PASSWORD")
         auth = f":{password}@" if password else ""
         
@@ -264,7 +268,8 @@ class Settings(BaseSettings):
     # ============================================================================
     # VALIDATION METHODS
     # ============================================================================
-    @validator("ENVIRONMENT")
+    @field_validator("ENVIRONMENT")
+    @classmethod
     def validate_environment(cls, v: str) -> str:
         """Validate environment value."""
         allowed_envs = ["development", "staging", "production", "testing"]
@@ -272,7 +277,8 @@ class Settings(BaseSettings):
             raise ValueError(f"Environment must be one of {allowed_envs}")
         return v
     
-    @validator("LOG_LEVEL")
+    @field_validator("LOG_LEVEL")
+    @classmethod
     def validate_log_level(cls, v: str) -> str:
         """Validate log level."""
         allowed_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -284,26 +290,20 @@ class Settings(BaseSettings):
     # ============================================================================
     # CONFIGURATION
     # ============================================================================
-    class Config:
-        """Pydantic configuration."""
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        
-        # Allow arbitrary types
-        arbitrary_types_allowed = True
-        
-        # Validation
-        validate_assignment = True
-        
-        # JSON schema
-        schema_extra = {
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+        json_schema_extra={
             "example": {
                 "APP_NAME": "AstroGeo AI MLOps",
                 "ENVIRONMENT": "production",
                 "DATABASE_URL": "postgresql+asyncpg://user:pass@localhost/db",
             }
         }
+    )
 
 
 @lru_cache()

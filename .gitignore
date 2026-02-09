@@ -1,8 +1,21 @@
-# Python
+# ============================================================================
+# Git Ignore - AstroGeo AI MLOps
+# Comprehensive ignore patterns for clean version control
+# ============================================================================
+
+# ============================================================================
+# PYTHON
+# ============================================================================
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# C extensions
+*.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -16,150 +29,300 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
+
+# PyInstaller
 *.manifest
 *.spec
+
+# Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Virtual Environments
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+test-results/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
 .env
+.env.local
+.env.*.local
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
-atlas/
-astrogeo/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-.project
-.pydevproject
-.settings/
+# Spyder project settings
+.spyderproject
+.spyproject
 
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb_checkpoints/
+# Rope project settings
+.ropeproject
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-*.env
+# mkdocs documentation
+/site
 
-# ML & Data Science
-mlruns/
-mlartifacts/
-*.pkl
-*.joblib
-*.h5
-*.hdf5
-*.model
-*.onnx
-models/production/*.pkl
-models/staging/*.pkl
-
-# Data
-data/raw/*
-data/processed/*
-data/features/*
-data/external/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/features/.gitkeep
-!data/external/.gitkeep
-*.csv
-*.parquet
-*.feather
-*.arrow
-
-# DVC
-.dvc/tmp
-.dvc/cache
-*.dvc.tmp
-
-# Docker
-*.log
-docker-compose.override.yml
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-
-# Logs
-logs/
-*.log
-log/
-
-# Testing
-.coverage
-.pytest_cache/
-.tox/
-htmlcov/
-.hypothesis/
-*.cover
-*.py,cover
-.cache
-nosetests.xml
-coverage.xml
-*.coveragerc
-
-# MyPy
+# mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Terraform
-*.tfstate
-*.tfstate.backup
-.terraform/
+# Pyre type checker
+.pyre/
 
-# Kubernetes
-*.kubeconfig
+# ============================================================================
+# IDEs
+# ============================================================================
+# VSCode
+.vscode/
+*.code-workspace
 
-# AWS
-*.pem
-.aws/
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
 
-# Secrets
-secrets/
-*.key
-*.pem
-*.crt
-credentials.json
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================================================
+# OS
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ============================================================================
+# PROJECT SPECIFIC
+# ============================================================================
+# Data files
+data/raw/*
+data/processed/*
+data/external/*
+data/interim/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+!data/interim/.gitkeep
+
+# Model files
+models/staging/*
+models/production/*
+models/archived/*
+models/mlruns/*
+!models/staging/.gitkeep
+!models/production/.gitkeep
+!models/archived/.gitkeep
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# DVC
+.dvc/cache
+.dvc/tmp
+.dvc/plots
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+*.temp
 *.bak
-*.swp
+*.backup
 
-# OS
-Thumbs.db
-.DS_Store
-desktop.ini
+# Database files
+*.db
+*.sqlite
+*.sqlite3
 
-# Monitoring
-prometheus/data/
-grafana/data/
+# Secrets and credentials
+.secrets/
+credentials.json
+service-account.json
+*.pem
+*.key
+*.crt
 
-# Node (if using any JS tools)
+# ============================================================================
+# DOCKER
+# ============================================================================
+# Docker volumes
+docker-volumes/
+
+# ============================================================================
+# CLOUD & INFRASTRUCTURE
+# ============================================================================
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# AWS
+.aws/credentials
+.aws/config
+
+# ============================================================================
+# DEVELOPMENT
+# ============================================================================
+# Profiling
+*.prof
+*.lprof
+
+# Benchmarks
+benchmark_results/
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
+
+# Build artifacts
+*.egg
+*.egg-info
+dist/
+build/
+
+# ============================================================================
+# DOCUMENTATION
+# ============================================================================
+# Generated docs
+docs/_build/
+docs/api/
+
+# ============================================================================
+# MISC
+# ============================================================================
+# Compressed files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Large files (use DVC instead)
+*.h5
+*.hdf5
+*.parquet
+*.feather
+
+# Node (if any frontend)
 node_modules/
-package-lock.json
+npm-debug.log
 
-# Local S3
-local_s3/
+# ============================================================================
+# KEEP THESE DIRECTORIES (with .gitkeep files)
+# ============================================================================
+# !data/raw/.gitkeep
+# !data/processed/.gitkeep
+# !models/staging/.gitkeep
+# !models/production/.gitkeep
+# !logs/.gitkeep
+
+# ============================================================================
+# FORCE INCLUDE (override patterns above)
+# ============================================================================
+# !important_file.txt
+
+# ============================================================================
+# END
+# ============================================================================

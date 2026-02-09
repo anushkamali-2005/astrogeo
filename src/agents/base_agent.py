@@ -19,11 +19,11 @@ import asyncio
 import time
 
 from langchain.agents import AgentExecutor, create_openai_functions_agent
-from langchain.tools import BaseTool
+from langchain_core.tools import BaseTool
 from langchain.memory import ConversationBufferMemory
 from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.schema import SystemMessage, HumanMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.core.config import settings
 from src.core.logging import get_logger

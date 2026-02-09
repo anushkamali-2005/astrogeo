@@ -228,6 +228,17 @@ class JWTManager:
             return {}
 
 
+# Convenience alias for callers expecting a module-level helper.
+def create_access_token(
+    data: Dict[str, Any],
+    expires_delta: Optional[timedelta] = None
+) -> str:
+    """
+    Create JWT access token (module-level helper).
+    """
+    return JWTManager.create_access_token(data, expires_delta=expires_delta)
+
+
 # ============================================================================
 # API KEY AUTHENTICATION
 # ============================================================================
@@ -446,6 +457,7 @@ __all__ = [
     "hash_password",
     "verify_password",
     "JWTManager",
+    "create_access_token",
     "validate_api_key",
     "get_current_user",
     "generate_api_key",

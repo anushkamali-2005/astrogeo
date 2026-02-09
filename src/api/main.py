@@ -1,28 +1,117 @@
+"""
+FastAPI Main Application
+========================
+Main entry point for the AstroGeo AI MLOps API.
+
+Author: Production Team
+Version: 1.0.0
+"""
+
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.core.config import settings
+from src.core.logging import get_logger
+from src.database.connection import init_db, close_db
+
+# Import routers
+from src.api.routes import health, agents, admin
+from src.api.routes.predictions import router as predictions_router
+
+
+logger = get_logger(__name__)
+
+
+# ============================================================================
+# LIFESPAN MANAGEMENT
+# ============================================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    FastAPI lifespan context manager.
+    Handles startup and shutdown events.
+    """
+    # Startup
+    logger.info("Starting AstroGeo AI API")
+    await init_db()
+    logger.info("Application startup complete")
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down AstroGeo AI API")
+    await close_db()
+    logger.info("Application shutdown complete")
+
+
+# ============================================================================
+# APPLICATION INITIALIZATION
+# ============================================================================
+
 app = FastAPI(
-    title="AstroGeo AI",
-    description="MLOps Platform with Agentic AI",
-    version="1.0.0"
+    title=settings.APP_NAME,
+    description=settings.APP_DESCRIPTION,
+    version=settings.APP_VERSION,
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
+
+
+# ============================================================================
+# MIDDLEWARE
+# ============================================================================
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_methods=settings.CORS_ALLOW_METHODS,
+    allow_headers=settings.CORS_ALLOW_HEADERS,
 )
+
+
+# ============================================================================
+# ROUTES
+# ============================================================================
+
+# Root endpoint
 @app.get("/")
 async def root():
-    return {"message": "AstroGeo AI is running!"}
-@app.get("/api/v1/health")
-async def health_check():
+    """Root endpoint with API information."""
     return {
-        "status": "healthy",
-        "service": "astrogeo-api",
-        "version": "1.0.0"
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": settings.ENVIRONMENT,
+        "status": "running",
+        "docs": "/docs"
     }
+
+
+# Register routers
+app.include_router(health.router, prefix=settings.API_V1_PREFIX)
+app.include_router(agents.router, prefix=settings.API_V1_PREFIX)
+app.include_router(predictions_router, prefix=settings.API_V1_PREFIX)
+app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
+
+
+# ============================================================================
+# MAIN ENTRY POINT
+# ============================================================================
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+    uvicorn.run(
+        "src.api.main:app",
+        host=settings.API_HOST,
+        port=settings.API_PORT,
+        reload=settings.DEBUG,
+        workers=1 if settings.DEBUG else settings.API_WORKERS,
+        log_level=settings.LOG_LEVEL.lower()
+    )
