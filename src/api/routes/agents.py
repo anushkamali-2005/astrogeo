@@ -40,10 +40,29 @@ router = APIRouter()
 # ============================================================================
 
 # Initialize agents once
-data_agent = DataAgent()
-ml_agent = MLAgent()
-geo_agent = GeoAgent()
-orchestrator = AgentOrchestrator()
+try:
+    data_agent = DataAgent()
+except Exception as e:
+    logger.error(f"Failed to initialize DataAgent: {e}")
+    data_agent = None
+
+try:
+    ml_agent = MLAgent()
+except Exception as e:
+    logger.error(f"Failed to initialize MLAgent: {e}")
+    ml_agent = None
+
+try:
+    geo_agent = GeoAgent()
+except Exception as e:
+    logger.error(f"Failed to initialize GeoAgent: {e}")
+    geo_agent = None
+
+try:
+    orchestrator = AgentOrchestrator()
+except Exception as e:
+    logger.error(f"Failed to initialize AgentOrchestrator: {e}")
+    orchestrator = None
 
 
 # ============================================================================

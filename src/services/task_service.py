@@ -131,28 +131,43 @@ def train_model_task(
     )
 
     try:
-        # TODO: Implement actual training logic with MLflow
-        # from src.services.training_service import train_ml_model
-        # result = asyncio.run(train_ml_model(model_id, dataset_id, hyperparameters))
-
-        # Mock training process
-        import time
-
-        time.sleep(5)  # Simulate training
-
-        result = {
-            "status": "completed",
-            "model_id": model_id,
-            "dataset_id": dataset_id,
-            "metrics": {"accuracy": 0.95, "precision": 0.93, "recall": 0.92, "f1_score": 0.925},
-            "training_time_seconds": 300,
-            "samples_trained": 10000,
-            "completed_at": datetime.utcnow().isoformat(),
-        }
+        # Import training service
+        from src.services.training_service import ModelTrainingService
+        
+        # Initialize training service
+        training_service = ModelTrainingService()
+        
+        # Use dataset_id as the dataset path (assuming it's a file path or can be resolved)
+        # In production, you might need to resolve dataset_id to actual file path
+        dataset_path = f"data/datasets/{dataset_id}.csv"  # Adjust as needed
+        
+        # Extract training parameters
+        model_type = hyperparameters.pop("model_type", "random_forest")
+        target_column = hyperparameters.pop("target_column", "target")
+        test_size = hyperparameters.pop("test_size", 0.2)
+        cv_folds = hyperparameters.pop("cv_folds", 5)
+        
+        # Run async training in sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        result = loop.run_until_complete(
+            training_service.train_model(
+                model_id=model_id,
+                dataset_path=dataset_path,
+                model_type=model_type,
+                hyperparameters=hyperparameters,
+                target_column=target_column,
+                test_size=test_size,
+                cv_folds=cv_folds
+            )
+        )
+        
+        loop.close()
 
         celery_logger.info(
             "Model training completed",
-            extra={"model_id": model_id, "accuracy": result["metrics"]["accuracy"]},
+            extra={"model_id": model_id, "metrics": result.get("metrics", {})},
         )
 
         return result

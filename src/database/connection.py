@@ -85,16 +85,25 @@ class DatabaseManager:
             )
 
             # Create async engine
-            self.engine = create_async_engine(
-                database_url,
-                echo=settings.DEBUG,
-                pool_size=settings.DB_POOL_SIZE,
-                max_overflow=settings.DB_MAX_OVERFLOW,
-                pool_timeout=settings.DB_POOL_TIMEOUT,
-                pool_recycle=settings.DB_POOL_RECYCLE,
-                pool_pre_ping=True,  # Verify connections before using
-                poolclass=QueuePool if settings.ENVIRONMENT == "production" else NullPool,
-            )
+            # Configure engine arguments
+            engine_args = {
+                "echo": settings.DEBUG,
+                "pool_pre_ping": True,
+            }
+
+            if settings.ENVIRONMENT == "production":
+                engine_args.update({
+                    "poolclass": QueuePool,
+                    "pool_size": settings.DB_POOL_SIZE,
+                    "max_overflow": settings.DB_MAX_OVERFLOW,
+                    "pool_timeout": settings.DB_POOL_TIMEOUT,
+                    "pool_recycle": settings.DB_POOL_RECYCLE,
+                })
+            else:
+                engine_args["poolclass"] = NullPool
+
+            # Create async engine
+            self.engine = create_async_engine(database_url, **engine_args)
 
             # Create session factory
             self.session_factory = async_sessionmaker(

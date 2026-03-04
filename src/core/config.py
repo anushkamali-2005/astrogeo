@@ -253,6 +253,24 @@ class Settings(BaseSettings):
     FROM_NAME: str = Field(default="AstroGeo AI", env="FROM_NAME")
 
     # ============================================================================
+    # SMTP EMAIL SETTINGS (Alternative to SendGrid)
+    # ============================================================================
+    SMTP_HOST: str = Field(default="smtp.gmail.com", env="SMTP_HOST")
+    SMTP_PORT: int = Field(default=587, env="SMTP_PORT")
+    SMTP_USER: Optional[str] = Field(default=None, env="SMTP_USER")
+    SMTP_PASSWORD: Optional[str] = Field(default=None, env="SMTP_PASSWORD")
+    SMTP_FROM_EMAIL: str = Field(default="noreply@astrogeo.ai", env="SMTP_FROM_EMAIL")
+    SMTP_FROM_NAME: str = Field(default="AstroGeo AI", env="SMTP_FROM_NAME")
+    SMTP_TLS: bool = Field(default=True, env="SMTP_TLS")
+    SMTP_SSL: bool = Field(default=False, env="SMTP_SSL")
+
+    # Email Templates
+    EMAIL_TEMPLATES_DIR: str = Field(default="./templates/emails", env="EMAIL_TEMPLATES_DIR")
+    PASSWORD_RESET_URL: str = Field(
+        default="http://localhost:3000/reset-password", env="PASSWORD_RESET_URL"
+    )
+
+    # ============================================================================
     # FILE UPLOAD SETTINGS
     # ============================================================================
     MAX_UPLOAD_SIZE: int = Field(

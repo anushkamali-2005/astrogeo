@@ -79,7 +79,7 @@ class SpatialAnalysisInput(LangChainBaseModel):
 
 def geocode_tool(address: str, country: Optional[str] = None) -> Dict[str, Any]:
     """
-    Convert address to geographic coordinates.
+    Convert address to geographic coordinates - REAL IMPLEMENTATION.
 
     Args:
         address: Address string
@@ -90,35 +90,66 @@ def geocode_tool(address: str, country: Optional[str] = None) -> Dict[str, Any]:
     """
     logger.info("Geocoding address via Geo agent", extra={"address": address, "country": country})
 
-    # Mock implementation - replace with actual geocoding service
-    return {
-        "status": "success",
-        "query": address,
-        "results": [
-            {
-                "formatted_address": "1600 Amphitheatre Parkway, Mountain View, CA 94043, USA",
-                "latitude": 37.4224764,
-                "longitude": -122.0842499,
-                "accuracy": "rooftop",
-                "confidence": 0.95,
-                "place_id": "ChIJ2eUgeAK6j4ARbn5u_wAGqWA",
-                "components": {
-                    "street_number": "1600",
-                    "route": "Amphitheatre Parkway",
-                    "city": "Mountain View",
-                    "state": "California",
-                    "country": "US",
-                    "postal_code": "94043",
-                },
+    try:
+        from geopy.geocoders import Nominatim
+        from geopy.exc import GeopyError
+        
+        # Initialize geocoder (using free Nominatim service)
+        geolocator = Nominatim(user_agent="astrogeo_mlops_app")
+        
+        # Add country if provided
+        query = f"{address}, {country}" if country else address
+        
+        # Geocode
+        location = geolocator.geocode(query, addressdetails=True, timeout=10)
+        
+        if not location:
+            return {
+                "status": "error",
+                "error": "Address not found",
+                "query": address
             }
-        ],
-        "message": "Successfully geocoded address",
-    }
+        
+        # Extract address components
+        components = location.raw.get('address', {})
+        
+        return {
+            "status": "success",
+            "query": address,
+            "results": [
+                {
+                    "formatted_address": location.address,
+                    "latitude": location.latitude,
+                    "longitude": location.longitude,
+                    "accuracy": "approximate",
+                    "confidence": 0.8,
+                    "place_id": location.raw.get('place_id'),
+                    "components": {
+                        "house_number": components.get('house_number'),
+                        "road": components.get('road'),
+                        "city": components.get('city') or components.get('town') or components.get('village'),
+                        "state": components.get('state'),
+                        "country": components.get('country'),
+                        "country_code": components.get('country_code'),
+                        "postal_code": components.get('postcode'),
+                    },
+                }
+            ],
+            "message": "Successfully geocoded address",
+        }
+    except (GeopyError, Exception) as e:
+        logger.error("Geocoding failed", error=e)
+        return {
+            "status": "error",
+            "error": str(e),
+            "query": address,
+            "message": "Geocoding service unavailable or address not found"
+        }
 
 
 def reverse_geocode_tool(latitude: float, longitude: float) -> Dict[str, Any]:
     """
-    Convert coordinates to address.
+    Convert coordinates to address - REAL IMPLEMENTATION.
 
     Args:
         latitude: Latitude coordinate
@@ -132,31 +163,54 @@ def reverse_geocode_tool(latitude: float, longitude: float) -> Dict[str, Any]:
         extra={"latitude": latitude, "longitude": longitude},
     )
 
-    return {
-        "status": "success",
-        "coordinates": {"latitude": latitude, "longitude": longitude},
-        "address": {
-            "formatted": "1600 Amphitheatre Parkway, Mountain View, CA 94043, USA",
-            "street_number": "1600",
-            "route": "Amphitheatre Parkway",
-            "city": "Mountain View",
-            "state": "California",
-            "state_code": "CA",
-            "country": "United States",
-            "country_code": "US",
-            "postal_code": "94043",
-        },
-        "place_name": "Google Headquarters",
-        "place_type": "building",
-        "message": "Successfully reverse geocoded coordinates",
-    }
+    try:
+        from geopy.geocoders import Nominatim
+        from geopy.exc import GeopyError
+        
+        geolocator = Nominatim(user_agent="astrogeo_mlops_app")
+        location = geolocator.reverse(f"{latitude}, {longitude}", addressdetails=True, timeout=10)
+        
+        if not location:
+            return {
+                "status": "error",
+                "error": "Location not found",
+                "coordinates": {"latitude": latitude, "longitude": longitude}
+            }
+        
+        components = location.raw.get('address', {})
+        
+        return {
+            "status": "success",
+            "coordinates": {"latitude": latitude, "longitude": longitude},
+            "address": {
+                "formatted": location.address,
+                "house_number": components.get('house_number'),
+                "road": components.get('road'),
+                "city": components.get('city') or components.get('town') or components.get('village'),
+                "state": components.get('state'),
+                "state_code": components.get('state_code'),
+                "country": components.get('country'),
+                "country_code": components.get('country_code'),
+                "postal_code": components.get('postcode'),
+            },
+            "place_name": components.get('amenity') or components.get('building'),
+            "place_type": components.get('type') or "location",
+            "message": "Successfully reverse geocoded coordinates",
+        }
+    except (GeopyError, Exception) as e:
+        logger.error("Reverse geocoding failed", error=e)
+        return {
+            "status": "error",
+            "error": str(e),
+            "coordinates": {"latitude": latitude, "longitude": longitude}
+        }
 
 
 def calculate_distance_tool(
     point1_lat: float, point1_lon: float, point2_lat: float, point2_lon: float, unit: str = "km"
 ) -> Dict[str, Any]:
     """
-    Calculate distance between two points.
+    Calculate distance between two points - REAL IMPLEMENTATION.
 
     Args:
         point1_lat: Point 1 latitude
@@ -170,24 +224,35 @@ def calculate_distance_tool(
     """
     logger.info("Calculating distance via Geo agent", extra={"unit": unit})
 
-    # Mock calculation - replace with actual haversine formula
-    distance_km = 42.5  # Example distance
-
-    # Convert to requested unit
-    conversions = {"km": 1.0, "miles": 0.621371, "meters": 1000.0}
-
-    distance = distance_km * conversions.get(unit, 1.0)
-
-    return {
-        "status": "success",
-        "point1": {"latitude": point1_lat, "longitude": point1_lon},
-        "point2": {"latitude": point2_lat, "longitude": point2_lon},
-        "distance": round(distance, 2),
-        "unit": unit,
-        "straight_line_distance": True,
-        "calculation_method": "haversine",
-        "message": f"Distance: {round(distance, 2)} {unit}",
-    }
+    try:
+        from geopy.distance import geodesic
+        
+        # Calculate distance using geodesic formula (more accurate than haversine)
+        point1 = (point1_lat, point1_lon)
+        point2 = (point2_lat, point2_lon)
+        
+        distance_km = geodesic(point1, point2).kilometers
+        
+        # Convert to requested unit
+        conversions = {"km": 1.0, "miles": 0.621371, "meters": 1000.0}
+        distance = distance_km * conversions.get(unit, 1.0)
+        
+        return {
+            "status": "success",
+            "point1": {"latitude": point1_lat, "longitude": point1_lon},
+            "point2": {"latitude": point2_lat, "longitude": point2_lon},
+            "distance": round(distance, 2),
+            "unit": unit,
+            "straight_line_distance": True,
+            "calculation_method": "geodesic",
+            "message": f"Distance: {round(distance, 2)} {unit}",
+        }
+    except Exception as e:
+        logger.error("Distance calculation failed", error=e)
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 
 def find_nearby_tool(

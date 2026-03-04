@@ -592,14 +592,30 @@ async def forgot_password(
         data={"sub": str(user.id), "purpose": "password_reset"}, expires_delta=timedelta(hours=1)
     )
 
-    # TODO: In production, send email with reset link
-    # await email_service.send_password_reset_email(user.email, reset_token)
+    # Send password reset email
+    try:
+        from src.services.smtp_email_service import smtp_email_service
+        
+        await smtp_email_service.send_password_reset_email(
+            to_email=user.email,
+            reset_token=reset_token,
+            user_name=user.full_name or user.username
+        )
+        
+        logger.info("Password reset email sent", extra={"user_id": str(user.id)})
+    except Exception as e:
+        logger.error("Failed to send password reset email", error=e, extra={"user_id": str(user.id)})
+        # Don't reveal email send failure to user (security)
+        # Continue to return success message
 
     logger.info("Password reset requested", extra={"user_id": str(user.id)})
 
-    # For development, return token (REMOVE IN PRODUCTION)
-    if settings.ENVIRONMENT == "development":
-        return {"message": "Password reset token generated (DEV ONLY)", "reset_token": reset_token}
+    # For development, also return token (REMOVE IN PRODUCTION)
+    if settings.ENVIRONMENT == "development" and settings.DEBUG:
+        return {
+            "message": "If the email exists, a reset link has been sent",
+            "reset_token_dev_only": reset_token
+        }
 
     return {"message": "If the email exists, a reset link has been sent"}
 
