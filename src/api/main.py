@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Import routers
 from src.api.routes import admin, agents, health
+from src.api.routes.demo import router as demo_router
 from src.api.routes.predictions import router as predictions_router
 from src.core.config import settings
 from src.core.logging import get_logger
@@ -98,6 +99,7 @@ app.include_router(health.router, prefix=settings.API_V1_PREFIX)
 app.include_router(agents.router, prefix=settings.API_V1_PREFIX)
 app.include_router(predictions_router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
+app.include_router(demo_router, prefix=settings.API_V1_PREFIX)
 
 
 # ============================================================================

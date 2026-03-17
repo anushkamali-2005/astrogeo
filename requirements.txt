@@ -1,79 +1,98 @@
 # AstroGeo AI MLOps - Requirements
-
-# This file lists the Python package dependencies required for the project.
 # Install using: pip install -r requirements.txt
 
 # Core Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-pydantic==2.5.0
-pydantic-settings==2.1.0
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
 
 # Database
-sqlalchemy==2.0.23
-alembic==1.13.0
-psycopg2-binary==2.9.9
-asyncpg==0.29.0
+sqlalchemy>=2.0.23
+alembic>=1.13.0
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
 
 # Redis & Caching
-redis==5.0.1
-celery==5.3.4
+redis>=5.0.1
+celery>=5.3.4
 
 # AI/ML - Core
-scikit-learn==1.3.2
-pandas==2.1.3
-numpy==1.26.2
-mlflow==2.9.1
+scikit-learn>=1.3.0
+pandas>=2.1.0
+numpy>=1.26.0
+mlflow>=2.9.0
+joblib>=1.3.0
 
 # AI/ML - LangChain & Agents
-langchain==0.1.0
-langchain-core==0.1.10
-langchain-openai==0.0.2
-openai==1.6.1
+langchain>=0.1.0
+langchain-core>=0.1.10
+langchain-openai>=0.0.2
+openai>=1.6.1
+
+# LangGraph (Stateful multi-agent pipeline)
+langgraph>=0.1.0
+langgraph-checkpoint>=1.0.0
+langgraph-checkpoint-sqlite>=1.0.0
+
+# pgvector (Vector similarity search)
+pgvector>=0.2.4
+
+# Sentence Transformers (Local embedding fallback)
+sentence-transformers>=2.3.0
+
+# SHAP (Explainability)
+shap>=0.44.0
 
 # Geospatial
-geopy==2.4.1
+geopy>=2.4.1
+geopandas>=0.14.0
+shapely>=2.0.0
+pyproj>=3.6.0
 
 # Email & Templates
-jinja2==3.1.2
-aiosmtplib==3.0.1
+jinja2>=3.1.2
+aiosmtplib>=3.0.1
 
 # Authentication & Security
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
-bcrypt==4.1.2
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+bcrypt>=4.1.2
 
 # HTTP & Requests
-httpx==0.25.2
-aiohttp==3.9.1
-requests==2.31.0
+httpx>=0.25.2
+aiohttp>=3.9.1
+requests>=2.31.0
 
 # Utilities
-python-dateutil==2.8.2
-python-dotenv==1.0.0
-shortuuid==1.0.11
+python-dateutil>=2.8.2
+python-dotenv>=1.0.0
+shortuuid>=1.0.11
 
 # AWS (Optional - for S3 storage)
-boto3==1.34.4
-botocore==1.34.4
+boto3>=1.34.4
 
 # Monitoring & Logging
-structlog==23.2.0
-python-json-logger==2.0.7
+structlog>=23.2.0
+python-json-logger>=2.0.7
+psutil>=5.9.0
+prometheus-client>=0.19.0
+
+# Async
+aiosqlite>=0.19.0
 
 # Testing (Development)
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-httpx==0.25.2  # For testing FastAPI
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
+pytest-cov>=4.1.0
 
 # Code Quality (Development)
-black==23.12.0
-flake8==6.1.0
-mypy==1.7.1
-isort==5.13.2
+black>=23.12.0
+flake8>=6.1.0
+mypy>=1.7.1
+isort>=5.13.2
 
 # Documentation (Optional)
-mkdocs==1.5.3
-mkdocs-material==9.5.2
+mkdocs>=1.5.3
+mkdocs-material>=9.5.2

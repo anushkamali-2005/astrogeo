@@ -1,0 +1,989 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.9, pytest-8.4.2, pluggy-1.5.0 -- C:\Users\aksha\anaconda3\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\aksha\OneDrive\Desktop\astrogeo
+configfile: pyproject.toml
+plugins: anyio-4.10.0, langsmith-0.6.7, asyncio-0.23.8, cov-7.0.0
+asyncio: mode=Mode.AUTO
+collecting ... collected 6 items
+
+tests/test_agents/test_data_agent.py::test_ingest_data_tool ERROR        [ 16%]
+tests/test_agents/test_data_agent.py::test_profile_data_tool ERROR       [ 33%]
+tests/test_agents/test_data_agent.py::test_validate_data_tool ERROR      [ 50%]
+
+=================================== ERRORS ====================================
+___________________ ERROR at setup of test_ingest_data_tool ___________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x00000247C53DA7B0>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x00000247C53D96A0>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x00000247C5471790>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x00000247C54C85A0>
+parameters = [('locations', 'geom', 4326, 'POINT', 'XY')]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py:951: in do_execute
+    cursor.execute(statement, parameters)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:177: in execute
+    self._adapt_connection._handle_exception(error)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:337: in _handle_exception
+    raise error
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:159: in execute
+    self.await_(_cursor.execute(operation, parameters))
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tx = <_queue.SimpleQueue object at 0x00000247C54C59C0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlite3.OperationalError: no such function: RecoverGeometryColumn
+
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:63: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'test_engine' for <Function test_ingest_data_tool>>
+kwargs = {}, unittest = False
+func = <function test_engine at 0x00000247C52F36A0>
+setup = <function _wrap_asyncgen_fixture.<locals>._asyncgen_fixture_wrapper.<locals>.setup at 0x00000247C54ACC20>
+finalizer = <function _wrap_asyncgen_fixture.<locals>._asyncgen_fixture_wrapper.<locals>.finalizer at 0x00000247C54ACB80>
+
+    @functools.wraps(fixture)
+    def _asyncgen_fixture_wrapper(request: FixtureRequest, **kwargs: Any):
+        unittest = fixturedef.unittest if hasattr(fixturedef, "unittest") else False
+        func = _perhaps_rebind_fixture_func(fixture, request.instance, unittest)
+        event_loop = kwargs.pop(event_loop_fixture_id)
+        gen_obj = func(
+            **_add_kwargs(func, kwargs, event_loop_fixture_id, event_loop, request)
+        )
+    
+        async def setup():
+            res = await gen_obj.__anext__()
+            return res
+    
+        def finalizer() -> None:
+            """Yield again, to finalize."""
+    
+            async def async_finalizer() -> None:
+                try:
+                    await gen_obj.__anext__()
+                except StopAsyncIteration:
+                    pass
+                else:
+                    msg = "Async generator fixture didn't stop."
+                    msg += "Yield only once."
+                    raise ValueError(msg)
+    
+            event_loop.run_until_complete(async_finalizer())
+    
+>       result = event_loop.run_until_complete(setup())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\anaconda3\Lib\site-packages\pytest_asyncio\plugin.py:347: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\anaconda3\Lib\asyncio\base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\pytest_asyncio\plugin.py:329: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\conftest.py:74: in test_engine
+    await conn.run_sync(Base.metadata.create_all)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\ext\asyncio\engine.py:887: in run_sync
+    return await greenlet_spawn(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\schema.py:5924: in create_all
+    bind._run_ddl_visitor(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:2459: in _run_ddl_visitor
+    ).traverse_single(element)
+      ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\visitors.py:661: in traverse_single
+    return meth(obj, **kw)
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:984: in visit_metadata
+    self.traverse_single(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\visitors.py:661: in traverse_single
+    return meth(obj, **kw)
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:1004: in visit_table
+    with self.with_ddl_events(
+..\..\..\anaconda3\Lib\contextlib.py:148: in __exit__
+    next(self.gen)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:892: in with_ddl_events
+    target.dispatch.after_create(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\event\attr.py:378: in __call__
+    fn(*args, **kw)
+..\..\..\anaconda3\Lib\site-packages\geoalchemy2\admin\__init__.py:41: in after_create
+    select_dialect(bind.dialect.name).after_create(table, bind, **kw)
+..\..\..\anaconda3\Lib\site-packages\geoalchemy2\admin\dialects\sqlite.py:332: in after_create
+    bind.execute(stmt)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py:951: in do_execute
+    cursor.execute(statement, parameters)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:177: in execute
+    self._adapt_connection._handle_exception(error)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:337: in _handle_exception
+    raise error
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:159: in execute
+    self.await_(_cursor.execute(operation, parameters))
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tx = <_queue.SimpleQueue object at 0x00000247C54C59C0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: RecoverGeometryColumn
+E               [SQL: SELECT RecoverGeometryColumn(?, ?, ?, ?, ?) AS "RecoverGeometryColumn_1"]
+E               [parameters: ('locations', 'geom', 4326, 'POINT', 'XY')]
+E               (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:63: OperationalError
+__________________ ERROR at setup of test_profile_data_tool ___________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x00000247C53DA7B0>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x00000247C53D96A0>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x00000247C5471790>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x00000247C54C85A0>
+parameters = [('locations', 'geom', 4326, 'POINT', 'XY')]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py:951: in do_execute
+    cursor.execute(statement, parameters)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:177: in execute
+    self._adapt_connection._handle_exception(error)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:337: in _handle_exception
+    raise error
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:159: in execute
+    self.await_(_cursor.execute(operation, parameters))
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tx = <_queue.SimpleQueue object at 0x00000247C54C59C0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlite3.OperationalError: no such function: RecoverGeometryColumn
+
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:63: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'test_engine' for <Function test_ingest_data_tool>>
+kwargs = {}, unittest = False
+func = <function test_engine at 0x00000247C52F36A0>
+setup = <function _wrap_asyncgen_fixture.<locals>._asyncgen_fixture_wrapper.<locals>.setup at 0x00000247C54ACC20>
+finalizer = <function _wrap_asyncgen_fixture.<locals>._asyncgen_fixture_wrapper.<locals>.finalizer at 0x00000247C54ACB80>
+
+    @functools.wraps(fixture)
+    def _asyncgen_fixture_wrapper(request: FixtureRequest, **kwargs: Any):
+        unittest = fixturedef.unittest if hasattr(fixturedef, "unittest") else False
+        func = _perhaps_rebind_fixture_func(fixture, request.instance, unittest)
+        event_loop = kwargs.pop(event_loop_fixture_id)
+        gen_obj = func(
+            **_add_kwargs(func, kwargs, event_loop_fixture_id, event_loop, request)
+        )
+    
+        async def setup():
+            res = await gen_obj.__anext__()
+            return res
+    
+        def finalizer() -> None:
+            """Yield again, to finalize."""
+    
+            async def async_finalizer() -> None:
+                try:
+                    await gen_obj.__anext__()
+                except StopAsyncIteration:
+                    pass
+                else:
+                    msg = "Async generator fixture didn't stop."
+                    msg += "Yield only once."
+                    raise ValueError(msg)
+    
+            event_loop.run_until_complete(async_finalizer())
+    
+>       result = event_loop.run_until_complete(setup())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\anaconda3\Lib\site-packages\pytest_asyncio\plugin.py:347: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\anaconda3\Lib\asyncio\base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\pytest_asyncio\plugin.py:329: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\conftest.py:74: in test_engine
+    await conn.run_sync(Base.metadata.create_all)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\ext\asyncio\engine.py:887: in run_sync
+    return await greenlet_spawn(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\schema.py:5924: in create_all
+    bind._run_ddl_visitor(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:2459: in _run_ddl_visitor
+    ).traverse_single(element)
+      ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\visitors.py:661: in traverse_single
+    return meth(obj, **kw)
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:984: in visit_metadata
+    self.traverse_single(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\visitors.py:661: in traverse_single
+    return meth(obj, **kw)
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:1004: in visit_table
+    with self.with_ddl_events(
+..\..\..\anaconda3\Lib\contextlib.py:148: in __exit__
+    next(self.gen)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:892: in with_ddl_events
+    target.dispatch.after_create(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\event\attr.py:378: in __call__
+    fn(*args, **kw)
+..\..\..\anaconda3\Lib\site-packages\geoalchemy2\admin\__init__.py:41: in after_create
+    select_dialect(bind.dialect.name).after_create(table, bind, **kw)
+..\..\..\anaconda3\Lib\site-packages\geoalchemy2\admin\dialects\sqlite.py:332: in after_create
+    bind.execute(stmt)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py:951: in do_execute
+    cursor.execute(statement, parameters)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:177: in execute
+    self._adapt_connection._handle_exception(error)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:337: in _handle_exception
+    raise error
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:159: in execute
+    self.await_(_cursor.execute(operation, parameters))
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tx = <_queue.SimpleQueue object at 0x00000247C54C59C0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: RecoverGeometryColumn
+E               [SQL: SELECT RecoverGeometryColumn(?, ?, ?, ?, ?) AS "RecoverGeometryColumn_1"]
+E               [parameters: ('locations', 'geom', 4326, 'POINT', 'XY')]
+E               (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:63: OperationalError
+__________________ ERROR at setup of test_validate_data_tool __________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x00000247C53DA7B0>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x00000247C53D96A0>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x00000247C5471790>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x00000247C54C85A0>
+parameters = [('locations', 'geom', 4326, 'POINT', 'XY')]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py:951: in do_execute
+    cursor.execute(statement, parameters)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:177: in execute
+    self._adapt_connection._handle_exception(error)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:337: in _handle_exception
+    raise error
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:159: in execute
+    self.await_(_cursor.execute(operation, parameters))
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tx = <_queue.SimpleQueue object at 0x00000247C54C59C0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlite3.OperationalError: no such function: RecoverGeometryColumn
+
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:63: OperationalError
+
+The above exception was the direct cause of the following exception:
+
+request = <SubRequest 'test_engine' for <Function test_ingest_data_tool>>
+kwargs = {}, unittest = False
+func = <function test_engine at 0x00000247C52F36A0>
+setup = <function _wrap_asyncgen_fixture.<locals>._asyncgen_fixture_wrapper.<locals>.setup at 0x00000247C54ACC20>
+finalizer = <function _wrap_asyncgen_fixture.<locals>._asyncgen_fixture_wrapper.<locals>.finalizer at 0x00000247C54ACB80>
+
+    @functools.wraps(fixture)
+    def _asyncgen_fixture_wrapper(request: FixtureRequest, **kwargs: Any):
+        unittest = fixturedef.unittest if hasattr(fixturedef, "unittest") else False
+        func = _perhaps_rebind_fixture_func(fixture, request.instance, unittest)
+        event_loop = kwargs.pop(event_loop_fixture_id)
+        gen_obj = func(
+            **_add_kwargs(func, kwargs, event_loop_fixture_id, event_loop, request)
+        )
+    
+        async def setup():
+            res = await gen_obj.__anext__()
+            return res
+    
+        def finalizer() -> None:
+            """Yield again, to finalize."""
+    
+            async def async_finalizer() -> None:
+                try:
+                    await gen_obj.__anext__()
+                except StopAsyncIteration:
+                    pass
+                else:
+                    msg = "Async generator fixture didn't stop."
+                    msg += "Yield only once."
+                    raise ValueError(msg)
+    
+            event_loop.run_until_complete(async_finalizer())
+    
+>       result = event_loop.run_until_complete(setup())
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..\..\..\anaconda3\Lib\site-packages\pytest_asyncio\plugin.py:347: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\anaconda3\Lib\asyncio\base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\pytest_asyncio\plugin.py:329: in setup
+    res = await gen_obj.__anext__()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\conftest.py:74: in test_engine
+    await conn.run_sync(Base.metadata.create_all)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\ext\asyncio\engine.py:887: in run_sync
+    return await greenlet_spawn(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\schema.py:5924: in create_all
+    bind._run_ddl_visitor(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:2459: in _run_ddl_visitor
+    ).traverse_single(element)
+      ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\visitors.py:661: in traverse_single
+    return meth(obj, **kw)
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:984: in visit_metadata
+    self.traverse_single(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\visitors.py:661: in traverse_single
+    return meth(obj, **kw)
+           ^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:1004: in visit_table
+    with self.with_ddl_events(
+..\..\..\anaconda3\Lib\contextlib.py:148: in __exit__
+    next(self.gen)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\ddl.py:892: in with_ddl_events
+    target.dispatch.after_create(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\event\attr.py:378: in __call__
+    fn(*args, **kw)
+..\..\..\anaconda3\Lib\site-packages\geoalchemy2\admin\__init__.py:41: in after_create
+    select_dialect(bind.dialect.name).after_create(table, bind, **kw)
+..\..\..\anaconda3\Lib\site-packages\geoalchemy2\admin\dialects\sqlite.py:332: in after_create
+    bind.execute(stmt)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\sql\elements.py:526: in _execute_on_connection
+    return connection._execute_clauseelement(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:2355: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\engine\default.py:951: in do_execute
+    cursor.execute(statement, parameters)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:177: in execute
+    self._adapt_connection._handle_exception(error)
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:337: in _handle_exception
+    raise error
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\dialects\sqlite\aiosqlite.py:159: in execute
+    self.await_(_cursor.execute(operation, parameters))
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+tx = <_queue.SimpleQueue object at 0x00000247C54C59C0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: RecoverGeometryColumn
+E               [SQL: SELECT RecoverGeometryColumn(?, ?, ?, ?, ?) AS "RecoverGeometryColumn_1"]
+E               [parameters: ('locations', 'geom', 4326, 'POINT', 'XY')]
+E               (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+..\..\..\anaconda3\Lib\site-packages\aiosqlite\core.py:63: OperationalError
+=========================== short test summary info ===========================
+ERROR tests/test_agents/test_data_agent.py::test_ingest_data_tool - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: RecoverGeometryColumn
+[SQL: SELECT RecoverGeometryColumn(?, ?, ?, ?, ?) AS "RecoverGeometryColumn_1"]
+[parameters: ('locations', 'geom', 4326, 'POINT', 'XY')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+ERROR tests/test_agents/test_data_agent.py::test_profile_data_tool - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: RecoverGeometryColumn
+[SQL: SELECT RecoverGeometryColumn(?, ?, ?, ?, ?) AS "RecoverGeometryColumn_1"]
+[parameters: ('locations', 'geom', 4326, 'POINT', 'XY')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+ERROR tests/test_agents/test_data_agent.py::test_validate_data_tool - sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such function: RecoverGeometryColumn
+[SQL: SELECT RecoverGeometryColumn(?, ?, ?, ?, ?) AS "RecoverGeometryColumn_1"]
+[parameters: ('locations', 'geom', 4326, 'POINT', 'XY')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 3 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+============================== 3 errors in 3.74s ==============================

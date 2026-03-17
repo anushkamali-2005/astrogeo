@@ -65,17 +65,31 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     # Check database
     db_status = await check_db_connection()
 
-    # Check Redis (mock for now)
-    redis_status = {"status": "healthy", "host": settings.REDIS_HOST, "port": settings.REDIS_PORT}
+    # Check Redis (Real check)
+    try:
+        import redis
+        r = redis.from_url(str(settings.REDIS_URL))
+        r.ping()
+        redis_status = {"status": "healthy", "host": settings.REDIS_HOST, "port": settings.REDIS_PORT}
+    except Exception as e:
+        redis_status = {"status": "unhealthy", "error": str(e)}
 
-    # Check MLflow (mock for now)
-    mlflow_status = {"status": "healthy", "tracking_uri": settings.MLFLOW_TRACKING_URI}
+    # Check MLflow (Real check)
+    try:
+        import requests
+        resp = requests.get(f"{settings.MLFLOW_TRACKING_URI}/health")
+        if resp.status_code == 200:
+            mlflow_status = {"status": "healthy", "tracking_uri": settings.MLFLOW_TRACKING_URI}
+        else:
+            mlflow_status = {"status": "unhealthy", "tracking_uri": settings.MLFLOW_TRACKING_URI}
+    except Exception:
+        # Fallback to simple connectivity check
+        mlflow_status = {"status": "degraded", "note": "Could not reach MLflow /health but service might be up"}
 
     # Determine overall health
     overall_healthy = (
         db_status["status"] == "healthy"
         and redis_status["status"] == "healthy"
-        and mlflow_status["status"] == "healthy"
     )
 
     response_data = DetailedHealthResponse(

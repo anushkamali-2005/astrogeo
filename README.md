@@ -118,31 +118,58 @@ graph TD
 
 ---
 
-## 🚀 Quick Start (For Developers)
+## 🚀 Quick Start (Demo)
 
-### 1. Prerequisites
-- Docker & Docker Desktop
-- Python 3.10+
-
-### 2. Setup
 ```bash
-# 1. Start the databases (Postgres, Redis, MLflow)
+# 1. Clone and install
+git clone <repo>
+pip install -r requirements.txt
+
+# 2. Environment
+cp .env.example .env
+# Add: OPENAI_API_KEY=sk-... (optional, uses local embeddings as fallback)
+
+# 3. Start infrastructure
 docker-compose up -d
 
-# 2. Setup your environment
-cp .env.example .env
-# (Edit .env with your keys if needed)
+# 4. Seed demo data + train models
+python scripts/seed_demo_data.py
 
-# 3. Apply database migrations
+# 5. Initialize pgvector tables (in PostgreSQL)
+# psql -U astrogeo_user -d astrogeo_db -f scripts/init_postgis.sql
+
+# 6. Run database migrations
 alembic upgrade head
 
-# 4. Start the API
+# 7. Start API
 uvicorn src.api.main:app --reload
+
+# 8. Open Swagger UI
+# Visit http://localhost:8000/docs
 ```
 
-### 3. Explore
-Once running, go to: **[http://localhost:8000/docs](http://localhost:8000/docs)** to see the interactive API documentation and try out the endpoints!
+### 🎯 Demo Queries to Try
+
+| Query | Domain | What it shows |
+|-------|--------|---------------|
+| "Will asteroid 2024 BX1 be visible from Mumbai?" | Astronomy | Agent 2: RF classifier + SHAP + MPC-verified RAG |
+| "Is there deforestation in Western Ghats?" | Earth Obs | Agent 1: RF multi-class + Sentinel Hub RAG |
+| "Drought risk in Marathwada this season?" | Climate | Agent 3: RF regressor + SMAP-based RAG |
+| "Show ISRO mission status" | ISRO | GraphRAG cross-domain traversal |
+| "Why is NDVI dropping in Maharashtra?" | Multi | Agent 5: GraphRAG BFS traversal |
+
+### 📡 Key Demo Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/v1/demo/query` | POST | **Main pipeline**: RAG + ML + SHAP + evidence chain |
+| `/api/v1/demo/agents` | GET | List all 5 agents with architecture |
+| `/api/v1/demo/model-cards` | GET | Public model cards for deployed models |
+| `/api/v1/demo/pipeline-status` | GET | LangGraph pipeline node configuration |
+| `/api/v1/demo/mlops-status` | GET | MLOps stack + retraining triggers |
+| `/api/v1/demo/verify/{hash}` | GET | Verify prediction by SHA-256 hash |
 
 ---
 
 **Built with ❤️ for the future of Geospatial AI**
+
